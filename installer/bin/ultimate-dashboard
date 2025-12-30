@@ -1,0 +1,3170 @@
+#!/usr/bin/env python3
+"""
+Pinet DHCP Dashboard - Kea DHCPv4 leases and pools viewer
+Configuration file: /etc/pinet-dhcp-dashboard/pinet-dhcp-dashboard.conf
+"""
+
+import json
+import http.server
+import socketserver
+import ssl
+import csv
+import socket
+import urllib.request
+import configparser
+import sys
+import subprocess
+import threading
+import queue
+import time
+import ipaddress
+import os
+from datetime import datetime
+from html import escape
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# Add lib directory to path
+sys.path.insert(0, '/opt/ultimate-dashboard/lib')
+from themes import THEMES, get_theme_css
+from stats import get_system_stats
+
+# Translations
+TRANSLATIONS = {
+    "fr": {
+        "title": "Tableau de bord DHCP Pinet",
+        "last_update": "Dernière mise à jour",
+        "refresh": "Rafraîchir",
+        "scan_status": "Scan réseau en cours...",
+        "next_refresh": "Prochain rafraîchissement dans",
+        "settings": "Réglages",
+        "settings_title": "Réglages du Dashboard",
+        "close": "Fermer",
+        "refresh_speed": "Vitesse de rafraîchissement",
+        "theme": "Thème",
+        "language": "Langue",
+        "auto_saved": "Les réglages sont automatiquement sauvegardés",
+        "dhcp_pools": "Pools DHCP",
+        "dhcp_clients": "Clients DHCP",
+        "clients": "clients",
+        "pool": "Pool",
+        "subnet": "Subnet",
+        "dns_domain": "Domaine DNS",
+        "type": "Type",
+        "ip_address": "Adresse IP",
+        "hostname": "Hostname",
+        "mac_address": "Adresse MAC",
+        "vendor": "Vendor",
+        "scan_status_col": "Statut Scan",
+        "services": "Services",
+        "lease_start": "Début bail",
+        "expiration": "Expiration",
+        "duration": "Durée",
+        "no_pools": "Aucun pool trouvé",
+        "scanning": "Scan...",
+        "progress": "Progression",
+        "static_devices": "Dispositifs Statiques & Réservations",
+        "devices": "dispositifs",
+        "no_static_devices": "Aucun dispositif statique trouvé",
+        "reservation": "Réservation",
+        "static": "Statique",
+    },
+    "en": {
+        "title": "Pinet DHCP Dashboard",
+        "last_update": "Last update",
+        "refresh": "Refresh",
+        "scan_status": "Network scan in progress...",
+        "next_refresh": "Next refresh in",
+        "settings": "Settings",
+        "settings_title": "Dashboard Settings",
+        "close": "Close",
+        "refresh_speed": "Refresh speed",
+        "theme": "Theme",
+        "language": "Language",
+        "auto_saved": "Settings are automatically saved",
+        "dhcp_pools": "DHCP Pools",
+        "dhcp_clients": "DHCP Clients",
+        "clients": "clients",
+        "pool": "Pool",
+        "subnet": "Subnet",
+        "dns_domain": "DNS Domain",
+        "type": "Type",
+        "ip_address": "IP Address",
+        "hostname": "Hostname",
+        "mac_address": "MAC Address",
+        "vendor": "Vendor",
+        "scan_status_col": "Scan Status",
+        "services": "Services",
+        "lease_start": "Lease Start",
+        "expiration": "Expiration",
+        "duration": "Duration",
+        "no_pools": "No pools found",
+        "scanning": "Scanning...",
+        "progress": "Progress",
+        "static_devices": "Static Devices & Reservations",
+        "devices": "devices",
+        "no_static_devices": "No static devices found",
+        "reservation": "Reservation",
+        "static": "Static",
+    },
+    "es": {
+        "title": "Panel DHCP Pinet",
+        "last_update": "Última actualización",
+        "refresh": "Actualizar",
+        "scan_status": "Escaneo de red en curso...",
+        "next_refresh": "Próxima actualización en",
+        "settings": "Configuración",
+        "settings_title": "Configuración del Panel",
+        "close": "Cerrar",
+        "refresh_speed": "Velocidad de actualización",
+        "theme": "Tema",
+        "language": "Idioma",
+        "auto_saved": "La configuración se guarda automáticamente",
+        "dhcp_pools": "Pools DHCP",
+        "dhcp_clients": "Clientes DHCP",
+        "clients": "clientes",
+        "pool": "Pool",
+        "subnet": "Subred",
+        "dns_domain": "Dominio DNS",
+        "type": "Tipo",
+        "ip_address": "Dirección IP",
+        "hostname": "Nombre de host",
+        "mac_address": "Dirección MAC",
+        "vendor": "Fabricante",
+        "scan_status_col": "Estado del escaneo",
+        "services": "Servicios",
+        "lease_start": "Inicio del contrato",
+        "expiration": "Expiración",
+        "duration": "Duración",
+        "no_pools": "No se encontraron pools",
+        "scanning": "Escaneando...",
+        "progress": "Progreso",
+        "static_devices": "Dispositivos Estáticos y Reservas",
+        "devices": "dispositivos",
+        "no_static_devices": "No se encontraron dispositivos estáticos",
+        "reservation": "Reserva",
+        "static": "Estático",
+    },
+    "de": {
+        "title": "Pinet DHCP Dashboard",
+        "last_update": "Letzte Aktualisierung",
+        "refresh": "Aktualisieren",
+        "scan_status": "Netzwerk-Scan läuft...",
+        "next_refresh": "Nächste Aktualisierung in",
+        "settings": "Einstellungen",
+        "settings_title": "Dashboard-Einstellungen",
+        "close": "Schließen",
+        "refresh_speed": "Aktualisierungsgeschwindigkeit",
+        "theme": "Thema",
+        "language": "Sprache",
+        "auto_saved": "Einstellungen werden automatisch gespeichert",
+        "dhcp_pools": "DHCP-Pools",
+        "dhcp_clients": "DHCP-Clients",
+        "clients": "Clients",
+        "pool": "Pool",
+        "subnet": "Subnetz",
+        "dns_domain": "DNS-Domäne",
+        "type": "Typ",
+        "ip_address": "IP-Adresse",
+        "hostname": "Hostname",
+        "mac_address": "MAC-Adresse",
+        "vendor": "Hersteller",
+        "scan_status_col": "Scan-Status",
+        "services": "Dienste",
+        "lease_start": "Lease-Beginn",
+        "expiration": "Ablauf",
+        "duration": "Dauer",
+        "no_pools": "Keine Pools gefunden",
+        "scanning": "Scanne...",
+        "progress": "Fortschritt",
+        "static_devices": "Statische Geräte & Reservierungen",
+        "devices": "Geräte",
+        "no_static_devices": "Keine statischen Geräte gefunden",
+        "reservation": "Reservierung",
+        "static": "Statisch",
+    },
+    "th": {
+        "title": "แดชบอร์ด DHCP Pinet",
+        "last_update": "อัปเดตล่าสุด",
+        "refresh": "รีเฟรช",
+        "scan_status": "กำลังสแกนเครือข่าย...",
+        "next_refresh": "รีเฟรชครั้งถัดไปใน",
+        "settings": "การตั้งค่า",
+        "settings_title": "การตั้งค่าแดชบอร์ด",
+        "close": "ปิด",
+        "refresh_speed": "ความเร็วในการรีเฟรช",
+        "theme": "ธีม",
+        "language": "ภาษา",
+        "auto_saved": "การตั้งค่าจะถูกบันทึกโดยอัตโนมัติ",
+        "dhcp_pools": "พูล DHCP",
+        "dhcp_clients": "ไคลเอนต์ DHCP",
+        "clients": "ไคลเอนต์",
+        "pool": "พูล",
+        "subnet": "ซับเน็ต",
+        "dns_domain": "โดเมน DNS",
+        "type": "ประเภท",
+        "ip_address": "ที่อยู่ IP",
+        "hostname": "ชื่อโฮสต์",
+        "mac_address": "ที่อยู่ MAC",
+        "vendor": "ผู้ผลิต",
+        "scan_status_col": "สถานะการสแกน",
+        "services": "บริการ",
+        "lease_start": "เริ่มสัญญา",
+        "expiration": "หมดอายุ",
+        "duration": "ระยะเวลา",
+        "no_pools": "ไม่พบพูล",
+        "scanning": "กำลังสแกน...",
+        "progress": "ความคืบหน้า",
+        "static_devices": "อุปกรณ์คงที่และการจอง",
+        "devices": "อุปกรณ์",
+        "no_static_devices": "ไม่พบอุปกรณ์คงที่",
+        "reservation": "การจอง",
+        "static": "คงที่",
+    }
+}
+
+# Default configuration
+CONFIG_PATHS = [
+    '/opt/ultimate-dashboard/etc/ultimate-dashboard.conf',
+    '/etc/ultimate-dashboard/ultimate-dashboard.conf',
+    './ultimate-dashboard.conf',
+    # Legacy paths (backward compatibility)
+    '/etc/pinet-dhcp-dashboard/pinet-dhcp-dashboard.conf',
+    '/opt/pinet-dhcp-dashboard/pinet-dhcp-dashboard.conf',
+]
+
+DEFAULT_CONFIG = {
+    'port': 8089,
+    'use_ssl': False,
+    'cert_file': '/root/pinet.crt',
+    'key_file': '/root/pinet.key',
+    'leases_file': '/var/lib/kea/kea-leases4.csv',
+    'kea_socket': '/run/kea/kea4-ctrl-socket',
+    'bind_address': '',
+    'enable_mac_vendor': True,
+    'mac_vendor_timeout': 2,
+    'reverse_dns_timeout': 2,
+    'enable_snmp': True,
+    'snmp_community': 'home',
+    'snmp_timeout': 1,
+    'enable_mdns': True,
+    'mdns_timeout': 1,
+    'enable_scanner': True,
+    'scanner_subnet': '192.168.1.0/24',
+    'scanner_timeout': 5
+}
+
+# Global config
+config = DEFAULT_CONFIG.copy()
+MAC_VENDOR_CACHE = {}
+MAC_VENDOR_DB = None  # Will load OUI database on first use
+DEVICE_INFO_CACHE = {}
+NETWORK_SCAN_RESULTS = {}
+STATIC_DEVICE_ENHANCED_DATA = {}  # Enhanced data for static devices (hostname, mac, vendor, etc.)
+LAST_SCAN_TIME = {}  # Track last scan time per IP
+SCAN_IN_PROGRESS = {}  # Track IPs currently being scanned
+CACHE_LOCK = threading.Lock()
+SCAN_THREAD = None
+
+# Service icons mapping
+SERVICE_ICONS = {
+    '22': ('🔑', 'SSH'),
+    '25': ('✉️', 'SMTP'),
+    '53': ('🔍', 'DNS'),
+    '80': ('🌐', 'HTTP'),
+    '110': ('📧', 'POP3'),
+    '143': ('📧', 'IMAP'),
+    '161': ('📊', 'SNMP'),
+    '389': ('👤', 'LDAP'),
+    '443': ('🔒', 'HTTPS'),
+    '631': ('🖨️', 'CUPS'),
+    '3000': ('📊', 'Web'),
+    '3306': ('🗄️', 'MySQL'),
+    '5000': ('📊', 'Flask'),
+    '5432': ('🗄️', 'PostgreSQL'),
+    '5900': ('👁️', 'VNC'),
+    '6379': ('⚡', 'Redis'),
+    '8000': ('🌐', 'HTTP'),
+    '8080': ('🌐', 'HTTP-Alt'),
+    '8443': ('🔒', 'HTTPS-Alt'),
+    '8888': ('🌐', 'HTTP'),
+    '9000': ('🎯', 'Admin'),
+    '9090': ('📊', 'Admin'),
+}
+
+
+def load_config():
+    """Load configuration from file"""
+    global config
+    
+    config_file = None
+    for path in CONFIG_PATHS:
+        if Path(path).exists():
+            config_file = path
+            break
+    
+    if not config_file:
+        print(f"Warning: No config file found in {CONFIG_PATHS}")
+        print("Using default configuration")
+        return
+    
+    print(f"Loading configuration from {config_file}")
+    parser = configparser.ConfigParser()
+    try:
+        parser.read(config_file)
+        
+        if 'server' in parser:
+            for key, value in parser['server'].items():
+                if key in DEFAULT_CONFIG:
+                    if isinstance(DEFAULT_CONFIG[key], bool):
+                        config[key] = parser.getboolean('server', key)
+                    elif isinstance(DEFAULT_CONFIG[key], int):
+                        config[key] = parser.getint('server', key)
+                    else:
+                        config[key] = value
+    except Exception as e:
+        print(f"Error loading config: {e}")
+
+
+def resolve_hostname(ip):
+    """Try to resolve hostname from IP via reverse DNS"""
+    try:
+        result = socket.gethostbyaddr(ip)
+        if result and result[0]:
+            return result[0]
+    except:
+        pass
+    return None
+
+
+def format_service_link(ip, port_service, service_name):
+    """Format service with icon and clickable link if applicable"""
+    port = port_service.split('/')[0]
+    
+    # Get icon and label
+    if port in SERVICE_ICONS:
+        icon, label = SERVICE_ICONS[port]
+    else:
+        icon, label = '⚙️', service_name[:15]
+    
+    # Create clickable link for web services
+    if port in ['80', '443', '8080', '8443', '3000', '5000', '8000', '8888', '9000', '9090']:
+        protocol = 'https' if port in ['443', '8443'] else 'http'
+        url = f"{protocol}://{ip}:{port}"
+        return f"{icon} <a href='{url}' target='_blank' class='service-link'>{port}</a>"
+    else:
+        return f"{icon} {port}"
+
+
+def load_mac_vendor_db():
+    """Load MAC vendor database from local OUI JSON file"""
+    global MAC_VENDOR_DB
+    
+    if MAC_VENDOR_DB is not None:
+        return MAC_VENDOR_DB
+    
+    oui_file = '/opt/ultimate-dashboard/data/oui.json'
+    
+    try:
+        if Path(oui_file).exists():
+            with open(oui_file, 'r') as f:
+                MAC_VENDOR_DB = json.load(f)
+            print(f"[INFO] Loaded {len(MAC_VENDOR_DB)} MAC vendors from local database")
+        else:
+            print(f"[WARN] OUI database not found at {oui_file}")
+            MAC_VENDOR_DB = {}
+    except Exception as e:
+        print(f"[ERROR] Failed to load OUI database: {e}")
+        MAC_VENDOR_DB = {}
+    
+    return MAC_VENDOR_DB
+
+
+def get_mac_vendor(mac):
+    """Get MAC vendor from local OUI database with API fallback"""
+    if not config['enable_mac_vendor'] or not mac:
+        return "N/A"
+    
+    # Normalize MAC address
+    mac_clean = mac.upper().replace('-', ':')
+    mac_prefix = ':'.join(mac_clean.split(':')[:3])
+    
+    # Check cache first
+    if mac_prefix in MAC_VENDOR_CACHE:
+        return MAC_VENDOR_CACHE[mac_prefix]
+    
+    # Try local database
+    db = load_mac_vendor_db()
+    if mac_prefix in db:
+        vendor = db[mac_prefix]
+        # Simplify long vendor names
+        if len(vendor) > 30:
+            vendor = vendor.split(',')[0].split('(')[0].strip()
+        MAC_VENDOR_CACHE[mac_prefix] = vendor
+        return vendor
+    
+    # Fallback to API (with rate limiting protection)
+    try:
+        url = f"https://api.macvendors.com/{mac_prefix}"
+        response = urllib.request.urlopen(url, timeout=config['mac_vendor_timeout'])
+        vendor = response.read().decode().strip()
+        if len(vendor) > 30:
+            vendor = vendor.split(',')[0].split('(')[0].strip()
+        MAC_VENDOR_CACHE[mac_prefix] = vendor
+        time.sleep(0.5)  # Rate limiting
+        return vendor
+    except:
+        MAC_VENDOR_CACHE[mac_prefix] = "Unknown"
+        return "Unknown"
+
+
+def get_snmp_sysDescr(ip, timeout=None):
+    """Get SNMP sysDescr from device"""
+    if not config['enable_snmp']:
+        return None
+    
+    if timeout is None:
+        timeout = config['snmp_timeout']
+    
+    try:
+        community = config['snmp_community']
+        result = subprocess.run(
+            ["snmpget", "-v", "2c", "-c", community, "-t", str(timeout), ip, "1.3.6.1.2.1.1.1.0"],
+            capture_output=True,
+            text=True,
+            timeout=timeout+1
+        )
+        if result.returncode == 0:
+            lines = result.stdout.strip().split('\n')
+            if lines:
+                for line in lines:
+                    if "STRING:" in line:
+                        return line.split("STRING:")[-1].strip().strip('"')
+    except:
+        pass
+    return None
+
+
+def get_mdns_info(hostname, timeout=1):
+    """Get mDNS info for hostname"""
+    if not hostname or hostname == "N/A":
+        return None
+    
+    try:
+        # Try to resolve via mDNS
+        result = subprocess.run(
+            ["avahi-resolve-host-name", "-4", f"{hostname}.local"],
+            capture_output=True,
+            text=True,
+            timeout=timeout
+        )
+        if result.returncode == 0:
+            # Returns "hostname.local	192.168.x.x"
+            return result.stdout.strip()
+    except:
+        pass
+    
+    # Try generic mDNS lookup
+    try:
+        result = subprocess.run(
+            ["avahi-browse", "-t", "-r", "-A"],
+            capture_output=True,
+            text=True,
+            timeout=timeout
+        )
+        if result.returncode == 0 and hostname in result.stdout:
+            return result.stdout
+    except:
+        pass
+    
+    return None
+
+
+def get_device_info_async(ip, hostname, vendor, mac):
+    """Get device info asynchronously (SNMP + mDNS)"""
+    cache_key = f"{ip}:{hostname}"
+    
+    with CACHE_LOCK:
+        if cache_key in DEVICE_INFO_CACHE:
+            return DEVICE_INFO_CACHE[cache_key]
+    
+    info = {
+        "snmp": None,
+        "mdns": None
+    }
+    
+    # Fetch in parallel
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        snmp_future = executor.submit(get_snmp_sysDescr, ip) if config['enable_snmp'] else None
+        mdns_future = executor.submit(get_mdns_info, hostname) if config['enable_mdns'] else None
+        
+        if snmp_future:
+            try:
+                info["snmp"] = snmp_future.result(timeout=config['snmp_timeout'])
+            except:
+                pass
+        
+        if mdns_future:
+            try:
+                info["mdns"] = mdns_future.result(timeout=config['mdns_timeout'])
+            except:
+                pass
+    
+    with CACHE_LOCK:
+        DEVICE_INFO_CACHE[cache_key] = info
+    
+    return info
+
+
+def get_custom_icon_svg(hostname):
+    """Generate custom SVG icons for special devices"""
+    h = hostname.lower() if hostname else ""
+    
+    # Marvin - PC Gaming Maître (Setup puissant avec écran large)
+    if "marvin" in h:
+        return """<svg width="24" height="24" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="marvin-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#ff4500;stop-opacity:1" />
+                    <stop offset="50%" style="stop-color:#ffd700;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#ff4500;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="screen-glow" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:#00ff88;stop-opacity:0.8" />
+                    <stop offset="100%" style="stop-color:#0088ff;stop-opacity:0.8" />
+                </linearGradient>
+            </defs>
+            <!-- Desk/Base -->
+            <rect x="6" y="36" width="36" height="3" rx="1" fill="#333"/>
+            <!-- Monitor stand -->
+            <rect x="22" y="30" width="4" height="6" fill="#555"/>
+            <rect x="18" y="35" width="12" height="2" rx="1" fill="#444"/>
+            <!-- Large curved monitor -->
+            <path d="M 8 12 Q 8 8 12 8 L 36 8 Q 40 8 40 12 L 40 28 Q 40 32 36 32 L 12 32 Q 8 32 8 28 Z" 
+                  fill="#1a1a1a" stroke="url(#marvin-grad)" stroke-width="1.5"/>
+            <!-- Screen glow -->
+            <rect x="11" y="11" width="26" height="18" rx="1" fill="url(#screen-glow)" opacity="0.9"/>
+            <!-- RGB lighting strips -->
+            <rect x="6" y="38" width="8" height="1" fill="#ff0088" opacity="0.8"/>
+            <rect x="18" y="38" width="12" height="1" fill="#00ff88" opacity="0.8"/>
+            <rect x="34" y="38" width="8" height="1" fill="#0088ff" opacity="0.8"/>
+            <!-- Power LED -->
+            <circle cx="24" cy="34" r="1" fill="#00ff00" opacity="0.9">
+                <animate attributeName="opacity" values="0.9;0.3;0.9" dur="2s" repeatCount="indefinite"/>
+            </circle>
+            <!-- Crown badge -->
+            <path d="M 20 4 L 22 7 L 24 4 L 26 7 L 28 4 L 27 10 L 21 10 Z" fill="#ffd700" stroke="#ff4500" stroke-width="0.5"/>
+            <text x="24" y="23" font-size="6" text-anchor="middle" fill="#ffd700" font-weight="bold" font-family="monospace">M</text>
+        </svg>"""
+    
+    # Shepard - PC Gaming Apprenti (Mini PC gamer compact)
+    elif "shepard" in h:
+        return """<svg width="24" height="24" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="shepard-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#2196F3;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="mini-screen" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:#64B5F6;stop-opacity:0.9" />
+                    <stop offset="100%" style="stop-color:#1976D2;stop-opacity:0.9" />
+                </linearGradient>
+            </defs>
+            <!-- Desk -->
+            <rect x="10" y="38" width="28" height="2" rx="1" fill="#444"/>
+            <!-- Mini PC case (cube style) -->
+            <rect x="14" y="20" width="12" height="14" rx="1" fill="#2a2a2a" stroke="url(#shepard-grad)" stroke-width="1.2"/>
+            <!-- Front panel -->
+            <rect x="15" y="22" width="10" height="11" fill="#1a1a1a"/>
+            <!-- RGB fan (top) -->
+            <circle cx="20" cy="25" r="3" fill="none" stroke="#4CAF50" stroke-width="0.8" opacity="0.7">
+                <animateTransform attributeName="transform" type="rotate" from="0 20 25" to="360 20 25" dur="3s" repeatCount="indefinite"/>
+            </circle>
+            <!-- Power button -->
+            <circle cx="20" cy="31" r="1.5" fill="#2196F3" opacity="0.8">
+                <animate attributeName="opacity" values="0.8;0.4;0.8" dur="1.5s" repeatCount="indefinite"/>
+            </circle>
+            <!-- Small monitor -->
+            <rect x="28" y="24" width="11" height="9" rx="0.5" fill="#1a1a1a" stroke="url(#shepard-grad)" stroke-width="1"/>
+            <!-- Monitor screen -->
+            <rect x="29" y="25" width="9" height="6" rx="0.3" fill="url(#mini-screen)"/>
+            <!-- Monitor stand -->
+            <rect x="32" y="33" width="3" height="4" fill="#555"/>
+            <rect x="30" y="37" width="7" height="1" rx="0.5" fill="#444"/>
+            <!-- Level indicator (learner badge) -->
+            <rect x="15" y="40" width="4" height="1.5" fill="#4CAF50" opacity="0.8"/>
+            <rect x="20" y="40" width="3" height="1.5" fill="#4CAF50" opacity="0.5"/>
+            <rect x="24" y="40" width="2" height="1.5" fill="#666" opacity="0.3"/>
+            <!-- Badge S -->
+            <circle cx="20" cy="16" r="5" fill="url(#shepard-grad)" opacity="0.9"/>
+            <text x="20" y="19" font-size="6" text-anchor="middle" fill="white" font-weight="bold" font-family="monospace">S</text>
+        </svg>"""
+    
+    return None
+
+
+def get_device_type(hostname, vendor, mac, ip=None):
+    """Detect device type from all available sources"""
+    h = hostname.lower() if hostname and hostname != "N/A" else ""
+    v = vendor.lower() if vendor else ""
+    m = mac.lower() if mac else ""
+    
+    combined = f"{h} {v} {m}"
+    
+    # Get async info (SNMP + mDNS)
+    if ip and ip != "N/A":
+        device_info = get_device_info_async(ip, hostname, vendor, mac)
+        if device_info.get("snmp"):
+            combined += f" {device_info['snmp'].lower()}"
+        if device_info.get("mdns"):
+            combined += f" {device_info['mdns'].lower()}"
+    
+    # === CUSTOM EXCEPTIONS (priority!) ===
+    # Marvin - PC Gaming Maître
+    if "marvin" in h:
+        return ("🎮👑", "PC Gaming Maître")
+    
+    # Shepard - PC Gaming Apprenti  
+    if "shepard" in h:
+        return ("🎮🔰", "PC Gaming Apprenti")
+    # === END CUSTOM EXCEPTIONS ===
+    
+    # Cameras (check before smartphones!)
+    if any(x in combined for x in ["dafang", "camera", "webcam", "hikvision", "dahua", "reolink", "wyze", "ring", "doorbell", "video", "ipcam", "cam-"]):
+        return ("📷", "Camera")
+    
+    # Samsung devices - specific detection by hostname
+    if "samsung" in v or "s24" in h or "galaxy" in h or "tab-a" in h or "sm-" in h:
+        if any(x in h for x in ["tab", "tablet"]):
+            return ("📱", "Samsung Tablet")
+        elif any(x in h for x in ["s24", "s23", "s22", "s21", "s20", "galaxy", "phone"]):
+            return ("📱", "Samsung Phone")
+        elif "tv" in h:
+            return ("📺", "Samsung TV")
+        else:
+            return ("📱", "Samsung")
+    
+    # Apple devices - check hostname first
+    if any(x in h for x in ["macbook", "imac", "mac-", "iphone", "ipad"]):
+        if "macbook" in h or "imac" in h or "mac" in h:
+            return ("🍎", "Apple Mac")
+        elif "iphone" in h:
+            return ("🍎", "iPhone")
+        elif "ipad" in h:
+            return ("🍎", "iPad")
+        else:
+            return ("🍎", "Apple")
+    
+    # Apple by vendor
+    if any(x in v for x in ["apple"]):
+        return ("🍎", "Apple")
+    
+    # Amazon devices (Echo, Fire TV, etc)
+    if "amazon" in v:
+        if any(x in combined for x in ["echo", "alexa", "dot"]):
+            return ("🔊", "Amazon Echo")
+        elif any(x in combined for x in ["fire", "firetv", "stick"]):
+            return ("📺", "Fire TV")
+        else:
+            return ("📦", "Amazon Device")
+    
+    # TV & Media devices (check hostname patterns)
+    if any(x in h for x in ["tv", "tele", "television"]):
+        if "philips" in combined or "phillips" in combined:
+            return ("📺", "Philips TV")
+        elif "samsung" in combined:
+            return ("📺", "Samsung TV")
+        elif "lg" in combined:
+            return ("📺", "LG TV")
+        else:
+            return ("📺", "TV")
+    
+    # TV by keywords
+    if any(x in combined for x in ["samsung tv", "lg tv", "sony tv", "philips", "panasonic", "toshiba", "vizio", "roku", "firestick", "appletv", "android tv", "smarttv", "hisense", "sharp"]):
+        return ("📺", "TV")
+    
+    # Smartphones/Android - check hostname for phone patterns
+    if any(x in h for x in ["phone", "mobile", "pixel", "oneplus", "redmi"]):
+        return ("📱", "Smartphone")
+    
+    # Smartphones by vendor
+    if any(x in combined for x in ["android", "pixel", "htc", "motorola", "oneplus", "redmi", "realme", "oppo", "vivo"]):
+        return ("📱", "Smartphone")
+    
+    # Tablets - check hostname
+    if any(x in h for x in ["tablet", "tab-", "ipad"]):
+        return ("📱", "Tablet")
+    
+    # Xiaomi devices
+    if "xiaomi" in v:
+        if any(x in h for x in ["camera", "cam", "dafang"]):
+            return ("📷", "Xiaomi Camera")
+        elif any(x in h for x in ["phone", "redmi", "mi-", "poco"]):
+            return ("📱", "Xiaomi Phone")
+        elif "tv" in h:
+            return ("📺", "Xiaomi TV")
+        else:
+            return ("🔌", "Xiaomi Device")
+    
+    # Routers & Network
+    if any(x in combined for x in ["router", "gateway", "access point", "ap-", "ap_", "wifi", "ubiquiti", "tp-link", "netgear", "cisco", "asus", "linksys", "mikrotik", "fortinet", "d-link", "meraki", "ieee registration authority"]):
+        return ("📡", "Router/AP")
+    
+    # Printers
+    if any(x in combined for x in ["print", "brother", "hp", "xerox", "canon", "epson", "ricoh", "konica", "minolta"]):
+        return ("🖨️", "Printer")
+    
+    # Smart Home & IoT
+    if any(x in combined for x in ["esp", "esp32", "esp8266", "esp8285", "espressif", "arduino", "home", "smart", "homekit", "zigbee", "zwave", "mqtt", "sonoff", "shelly", "tasmota", "tuya"]):
+        return ("🔌", "Smart Home")
+    
+    # Laptops & Desktops
+    if any(x in combined for x in ["laptop", "desktop", "pc", "computer", "dell", "hp", "lenovo", "asus", "acer", "msi", "windows", "linux", "workstation"]):
+        return ("💻", "Computer")
+    
+    # Raspberry Pi & SBC
+    if any(x in combined for x in ["raspi", "raspberry", "rpi", "pi", "jetson", "odroid", "beaglebone"]):
+        return ("🍓", "Raspberry Pi")
+    
+    # Servers & NAS
+    if any(x in combined for x in ["server", "nas", "synology", "qnap", "pfsense", "proxmox", "homelab", "unraid"]):
+        return ("⚙️", "Server/NAS")
+    
+    # Smart TVs & Media Players
+    if any(x in combined for x in ["chromecast", "nvidia shield", "kodi", "plex", "media"]):
+        return ("📺", "Media Player")
+    
+    # Gaming
+    if any(x in combined for x in ["gaming", "xbox", "playstation", "ps4", "ps5", "nintendo", "steam", "switch"]):
+        return ("🎮", "Gaming")
+    
+    # Audio & Speakers
+    if any(x in combined for x in ["speaker", "audio", "sonos", "bose", "harman", "denon", "yamaha", "amplifier"]):
+        return ("🔊", "Audio")
+    
+    # Smartwatch & Wearables
+    if any(x in combined for x in ["watch", "fitbit", "garmin", "smartband", "wearable"]):
+        return ("⌚", "Wearable")
+    
+    # Printers & Scanners
+    if any(x in combined for x in ["scanner", "mfp", "multifunction"]):
+        return ("📄", "Scanner")
+    
+    # Network Storage
+    if any(x in combined for x in ["storage", "backup", "hdd", "ssd"]):
+        return ("💾", "Storage")
+    
+    # Hui Zhou Gaoshengda = Chinese tech company (often smart devices/TV boxes)
+    if "hui zhou gaoshengda" in v or "gaoshengda" in v:
+        if "tv" in h or "tele" in h:
+            return ("📺", "TV Box")
+        else:
+            return ("📺", "Media Box")
+    
+    # Default
+    return ("❓", "Unknown")
+
+
+def get_hostname_from_snmp(ip, community="home"):
+    """Try to get hostname via SNMP"""
+    try:
+        result = subprocess.run(
+            ["snmpget", "-v2c", "-c", community, "-Oqv", "-t", "2", ip, "SNMPv2-MIB::sysName.0"],
+            capture_output=True,
+            text=True,
+            timeout=3
+        )
+        if result.returncode == 0:
+            hostname = result.stdout.strip().strip('"')
+            if hostname and hostname != "No Such Object available on this agent at this OID":
+                return hostname
+    except Exception:
+        pass
+    return None
+
+
+def get_mac_from_arp(ip):
+    """Try to get MAC address from ARP cache"""
+    try:
+        # Try ip neigh first (more reliable)
+        result = subprocess.run(
+            ["ip", "neigh", "show", ip],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            # Format: 192.168.1.1 dev eth0 lladdr aa:bb:cc:dd:ee:ff REACHABLE
+            parts = result.stdout.split()
+            for i, part in enumerate(parts):
+                if part == "lladdr" and i + 1 < len(parts):
+                    mac = parts[i + 1]
+                    if ':' in mac:
+                        return mac.upper()
+        
+        # Fallback to arp command
+        result = subprocess.run(
+            ["arp", "-n", ip],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        if result.returncode == 0:
+            lines = result.stdout.split('\n')
+            for line in lines:
+                if ip in line:
+                    parts = line.split()
+                    if len(parts) >= 3:
+                        mac = parts[2]
+                        if ':' in mac and mac != "(incomplete)":
+                            return mac.upper()
+    except Exception:
+        pass
+    return None
+
+
+def get_hostname_from_reverse_dns(ip):
+    """Try to get hostname via reverse DNS"""
+    try:
+        hostname = socket.gethostbyaddr(ip)[0]
+        if hostname:
+            return hostname
+    except Exception:
+        pass
+    return None
+
+
+def ping_host(ip):
+    """Ping host to check if it's alive"""
+    try:
+        result = subprocess.run(
+            ["ping", "-c", "1", "-W", "1", ip],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+def scan_network_host(ip):
+    """Scan a single host with optimized nmap for open ports and services"""
+    try:
+        # Fast TCP connect scan with improved timeouts
+        result = subprocess.run(
+            ["nmap", "-sV", "-p", "22,80,443,3000,8000,8080,8443,9000,5000,5900,631,3306,5432,25,53,110,143,161,389,6379", 
+             "--open", "--max-retries", "2", "--host-timeout", "30s",
+             "--max-rtt-timeout", "2000ms", "--initial-rtt-timeout", "500ms", 
+             "-T4", "-n", ip],
+            capture_output=True,
+            text=True,
+            timeout=35
+        )
+        
+        services = []
+        if result.returncode == 0:
+            lines = result.stdout.split('\n')
+            for line in lines:
+                if '/tcp' in line and 'open' in line:
+                    parts = line.split()
+                    if len(parts) >= 3:
+                        port_service = parts[0]
+                        status = parts[1]
+                        service = ' '.join(parts[2:]) if len(parts) > 2 else "Unknown"
+                        services.append({
+                            "port": port_service,
+                            "status": status,
+                            "service": service
+                        })
+        
+        return services
+    except Exception as e:
+        return []
+
+
+def scan_static_device_enhanced(ip):
+    """Enhanced scan for static devices using multiple methods"""
+    data = {
+        'hostname': None,
+        'mac': None,
+        'vendor': None,
+        'services': [],
+        'alive': False
+    }
+    
+    # 1. Ping test (this also populates ARP cache)
+    data['alive'] = ping_host(ip)
+    
+    if not data['alive']:
+        return data
+    
+    # 2. Try ARP for MAC address (give it a moment after ping)
+    time.sleep(0.1)  # Small delay to let ARP cache update
+    mac = get_mac_from_arp(ip)
+    if mac:
+        data['mac'] = mac
+        # Get vendor from MAC
+        data['vendor'] = get_mac_vendor(mac)
+    
+    # 3. Try reverse DNS for hostname
+    hostname = get_hostname_from_reverse_dns(ip)
+    if hostname:
+        data['hostname'] = hostname
+    
+    # 4. Try SNMP for hostname (if reverse DNS failed)
+    if not data['hostname']:
+        snmp_hostname = get_hostname_from_snmp(ip, "home")
+        if snmp_hostname:
+            data['hostname'] = snmp_hostname
+    
+    # 5. Nmap port scan for services
+    data['services'] = scan_network_host(ip)
+    
+    return data
+
+
+def network_scanner_thread():
+    """Background thread for continuous scanning of DHCP clients and static devices"""
+    
+    while True:
+        try:
+            if not config['enable_scanner']:
+                time.sleep(10)
+                continue
+            
+            # Get current DHCP leases and static devices
+            dhcp_info = get_dhcp_info_cached()
+            dhcp_ips = [lease['ip_address'] for lease in dhcp_info.get('leases', [])]
+            static_ips = [dev['ip_address'] for dev in dhcp_info.get('static_devices', [])]
+            
+            # Combine both lists
+            all_ips = dhcp_ips + static_ips
+            
+            if not all_ips:
+                print(f"[INFO] No devices found, waiting...")
+                time.sleep(30)
+                continue
+            
+            current_time = time.time()
+            
+            # Find IPs that need scanning (not scanned in last 60 seconds)
+            dhcp_ips_to_scan = []
+            static_ips_to_scan = []
+            
+            for ip in dhcp_ips:
+                last_scan = LAST_SCAN_TIME.get(ip, 0)
+                if current_time - last_scan >= 60:
+                    dhcp_ips_to_scan.append(ip)
+            
+            for ip in static_ips:
+                last_scan = LAST_SCAN_TIME.get(ip, 0)
+                if current_time - last_scan >= 60:
+                    static_ips_to_scan.append(ip)
+            
+            # Scan DHCP devices (just services)
+            if dhcp_ips_to_scan:
+                print(f"[INFO] Scanning {len(dhcp_ips_to_scan)} DHCP devices for services")
+                
+                # Mark IPs as scanning
+                with CACHE_LOCK:
+                    for ip in dhcp_ips_to_scan:
+                        SCAN_IN_PROGRESS[ip] = True
+                
+                # Parallel scan of DHCP hosts (services only)
+                with ThreadPoolExecutor(max_workers=10) as executor:
+                    future_to_ip = {executor.submit(scan_network_host, ip): ip for ip in dhcp_ips_to_scan}
+                    
+                    for future in as_completed(future_to_ip):
+                        ip = future_to_ip[future]
+                        try:
+                            services = future.result(timeout=config['scanner_timeout']+2)
+                            with CACHE_LOCK:
+                                NETWORK_SCAN_RESULTS[ip] = services if services else []
+                                LAST_SCAN_TIME[ip] = time.time()
+                                SCAN_IN_PROGRESS[ip] = False
+                            if services:
+                                print(f"[INFO] {ip}: {len(services)} services found")
+                        except Exception as e:
+                            print(f"[WARN] {ip}: scan failed - {e}")
+                            with CACHE_LOCK:
+                                LAST_SCAN_TIME[ip] = time.time()
+                                SCAN_IN_PROGRESS[ip] = False
+            
+            # Scan static devices (enhanced: hostname, MAC, vendor, services)
+            if static_ips_to_scan:
+                print(f"[INFO] Enhanced scanning {len(static_ips_to_scan)} static devices")
+                
+                # Mark IPs as scanning
+                with CACHE_LOCK:
+                    for ip in static_ips_to_scan:
+                        SCAN_IN_PROGRESS[ip] = True
+                
+                # Parallel enhanced scan of static hosts
+                with ThreadPoolExecutor(max_workers=10) as executor:
+                    future_to_ip = {executor.submit(scan_static_device_enhanced, ip): ip for ip in static_ips_to_scan}
+                    
+                    for future in as_completed(future_to_ip):
+                        ip = future_to_ip[future]
+                        try:
+                            data = future.result(timeout=config['scanner_timeout']+5)
+                            with CACHE_LOCK:
+                                # Store services in regular cache
+                                NETWORK_SCAN_RESULTS[ip] = data.get('services', [])
+                                # Store enhanced data separately
+                                STATIC_DEVICE_ENHANCED_DATA[ip] = {
+                                    'hostname': data.get('hostname'),
+                                    'mac': data.get('mac'),
+                                    'vendor': data.get('vendor'),
+                                    'alive': data.get('alive', False)
+                                }
+                                LAST_SCAN_TIME[ip] = time.time()
+                                SCAN_IN_PROGRESS[ip] = False
+                            if data.get('alive'):
+                                print(f"[INFO] {ip}: hostname={data.get('hostname', 'N/A')}, MAC={data.get('mac', 'N/A')}, services={len(data.get('services', []))}")
+                        except Exception as e:
+                            print(f"[WARN] {ip}: enhanced scan failed - {e}")
+                            with CACHE_LOCK:
+                                LAST_SCAN_TIME[ip] = time.time()
+                                SCAN_IN_PROGRESS[ip] = False
+            
+            # Clean up old entries no longer in any list
+            with CACHE_LOCK:
+                old_ips = set(NETWORK_SCAN_RESULTS.keys()) - set(all_ips)
+                for ip in old_ips:
+                    del NETWORK_SCAN_RESULTS[ip]
+                    if ip in LAST_SCAN_TIME:
+                        del LAST_SCAN_TIME[ip]
+                    if ip in SCAN_IN_PROGRESS:
+                        del SCAN_IN_PROGRESS[ip]
+                    if ip in STATIC_DEVICE_ENHANCED_DATA:
+                        del STATIC_DEVICE_ENHANCED_DATA[ip]
+            
+            # Short sleep before next iteration
+            time.sleep(5)
+            
+        except Exception as e:
+            print(f"[ERROR] Scanner error: {e}")
+            time.sleep(10)
+
+
+def ping_host(ip):
+    """Check if host is alive using ping"""
+    try:
+        result = subprocess.run(
+            ["ping", "-c", "1", "-W", "1", ip],
+            capture_output=True,
+            timeout=2
+        )
+        return result.returncode == 0
+    except:
+        return False
+    """Send command to Kea via Unix socket"""
+    try:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.connect(config['kea_socket'])
+        sock.sendall(json.dumps(command).encode() + b'\n')
+        response = b''
+        sock.settimeout(2)
+        try:
+            while True:
+                data = sock.recv(4096)
+                if not data:
+                    break
+                response += data
+        except socket.timeout:
+            pass
+        sock.close()
+        if response:
+            return json.loads(response)
+        return {}
+    except Exception as e:
+        print(f"Error communicating with Kea: {e}")
+        return {}
+
+
+def get_subnets():
+    """Get subnet information from Kea via control socket"""
+    subnets = {}
+    
+    try:
+        # Try to get config from Kea control socket
+        import json
+        import socket as sock
+        
+        # Connect to Kea control socket
+        kea_socket = config.get('kea_socket', '/run/kea/kea4-ctrl-socket')
+        
+        if not Path(kea_socket).exists():
+            # Fallback: extract from leases
+            return extract_subnets_from_leases()
+        
+        client = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
+        client.settimeout(2)
+        client.connect(kea_socket)
+        
+        # Request config-get
+        request = {
+            "command": "config-get",
+            "service": ["dhcp4"]
+        }
+        
+        client.sendall(json.dumps(request).encode())
+        response = b""
+        while True:
+            chunk = client.recv(4096)
+            if not chunk:
+                break
+            response += chunk
+            try:
+                json.loads(response.decode())
+                break
+            except:
+                continue
+        
+        client.close()
+        
+        data = json.loads(response.decode())
+        
+        # Handle response (can be dict or list)
+        if isinstance(data, dict):
+            dhcp4_config = data.get("arguments", {}).get("Dhcp4", {})
+        elif isinstance(data, list) and len(data) > 0:
+            dhcp4_config = data[0].get("arguments", {}).get("Dhcp4", {})
+        else:
+            raise Exception("Unexpected response format")
+        
+        subnet_list = dhcp4_config.get("subnet4", [])
+        
+        for subnet in subnet_list:
+            subnet_id = str(subnet.get("id", "unknown"))
+            pools = []
+            for pool in subnet.get("pools", []):
+                pools.append(pool.get("pool", ""))
+            
+            # Extract DNS domain from option-data (domain-search or domain-name)
+            dns_domain = "N/A"
+            option_data = subnet.get("option-data", [])
+            for option in option_data:
+                if option.get("name") in ["domain-search", "domain-name"]:
+                    dns_domain = option.get("data", "N/A")
+                    break
+            
+            subnets[subnet_id] = {
+                "subnet": subnet.get("subnet", "N/A"),
+                "pools": pools,
+                "dns_domain": dns_domain,
+                "reservations": subnet.get("reservations", [])  # Add reservations
+            }
+            
+        print(f"[INFO] Loaded {len(subnets)} subnets from Kea config")
+        
+    except Exception as e:
+        print(f"[WARN] Could not get subnets from Kea: {e}")
+        # Fallback: extract from leases
+        return extract_subnets_from_leases()
+    
+    return subnets
+
+
+def extract_subnets_from_leases():
+    """Extract subnet info from leases file as fallback"""
+    subnets = {}
+    
+    try:
+        with open(config['leases_file'], 'r') as f:
+            reader = csv.DictReader(f)
+            subnet_ips = {}
+            
+            for row in reader:
+                subnet_id = row.get("subnet_id", "1")
+                ip = row.get("address")
+                
+                if subnet_id and ip:
+                    if subnet_id not in subnet_ips:
+                        subnet_ips[subnet_id] = []
+                    subnet_ips[subnet_id].append(ip)
+            
+            # Create subnet entries
+            for subnet_id, ips in subnet_ips.items():
+                if ips:
+                    # Deduce subnet from IPs
+                    first_ip = ips[0]
+                    network = ipaddress.ip_network(f"{first_ip}/24", strict=False)
+                    
+                    subnets[subnet_id] = {
+                        "subnet": str(network),
+                        "pools": [f"{network.network_address} - {network.broadcast_address}"],
+                        "dns_domain": "N/A"
+                    }
+    except Exception as e:
+        print(f"[WARN] Could not extract subnets from leases: {e}")
+    
+    return subnets
+
+
+def get_non_pool_ips_and_reservations():
+    """Get IPs outside DHCP pools and DHCP reservations to scan"""
+    static_devices = []
+    
+    try:
+        subnets = get_subnets()
+        
+        for subnet_id, subnet_info in subnets.items():
+            subnet_cidr = subnet_info.get("subnet", "")
+            if not subnet_cidr or subnet_cidr == "N/A":
+                continue
+            
+            try:
+                network = ipaddress.ip_network(subnet_cidr, strict=False)
+            except:
+                continue
+            
+            # Get all pool ranges
+            pool_ranges = []
+            for pool_str in subnet_info.get("pools", []):
+                # Parse pool string (format: "192.168.1.10 - 192.168.1.100" or "192.168.1.0/24")
+                try:
+                    if " - " in pool_str:
+                        start_str, end_str = pool_str.split(" - ")
+                        start_ip = ipaddress.ip_address(start_str.strip())
+                        end_ip = ipaddress.ip_address(end_str.strip())
+                        pool_ranges.append((start_ip, end_ip))
+                    else:
+                        # It's a CIDR
+                        pool_network = ipaddress.ip_network(pool_str, strict=False)
+                        pool_ranges.append((pool_network.network_address, pool_network.broadcast_address))
+                except:
+                    pass
+            
+            # Get reservations from Kea config
+            reservations = subnet_info.get("reservations", [])
+            for res in reservations:
+                ip_str = res.get("ip-address", "")
+                hw_addr = res.get("hw-address", "")
+                hostname = res.get("hostname", "N/A")
+                
+                if ip_str:
+                    static_devices.append({
+                        "ip_address": ip_str,
+                        "hostname": hostname,
+                        "hw_address": hw_addr,
+                        "type": "reservation",
+                        "subnet": subnet_cidr,
+                        "vendor": "Unknown",
+                        "device_type": "Unknown",
+                        "device_icon": "📌"
+                    })
+            
+            # Find IPs outside pools (static IPs)
+            # For efficiency, we'll scan specific ranges commonly used for static IPs
+            # For example, first 10 IPs and last 10 IPs of the subnet (excluding network/broadcast)
+            all_ips = list(network.hosts())
+            
+            if len(all_ips) > 20:
+                # Scan first 10 and last 10
+                ips_to_check = all_ips[:10] + all_ips[-10:]
+            else:
+                # Scan all if small subnet
+                ips_to_check = all_ips
+            
+            for ip in ips_to_check:
+                # Check if IP is in any pool
+                in_pool = False
+                for start_ip, end_ip in pool_ranges:
+                    if start_ip <= ip <= end_ip:
+                        in_pool = True
+                        break
+                
+                # If not in pool and not already a reservation, add as static IP candidate
+                if not in_pool:
+                    # Check if already in reservations
+                    already_reserved = any(d["ip_address"] == str(ip) for d in static_devices)
+                    if not already_reserved:
+                        static_devices.append({
+                            "ip_address": str(ip),
+                            "hostname": "N/A",
+                            "hw_address": "",
+                            "type": "static",
+                            "subnet": subnet_cidr,
+                            "vendor": "Unknown",
+                            "device_type": "Unknown",
+                            "device_icon": "🔧"
+                        })
+        
+        print(f"[INFO] Found {len(static_devices)} static devices/reservations to scan")
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to get non-pool IPs and reservations: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    return static_devices
+
+
+# Global cache for fast rendering
+DHCP_INFO_CACHE = {"pools": [], "leases": [], "static_devices": []}
+DHCP_CACHE_LOCK = threading.Lock()
+LAST_UPDATE = 0
+
+
+def get_dhcp_info_cached():
+    """Get DHCP info with caching for fast initial load"""
+    with DHCP_CACHE_LOCK:
+        return DHCP_INFO_CACHE.copy()
+
+
+def update_dhcp_cache():
+    """Continuous DHCP cache updater thread"""
+    global LAST_UPDATE
+    while True:
+        try:
+            info = get_dhcp_info()
+            static_devices = get_non_pool_ips_and_reservations()
+            
+            with DHCP_CACHE_LOCK:
+                DHCP_INFO_CACHE["pools"] = info.get("pools", [])
+                DHCP_INFO_CACHE["leases"] = info.get("leases", [])
+                DHCP_INFO_CACHE["static_devices"] = static_devices
+                LAST_UPDATE = time.time()
+                print(f"[INFO] Cache updated: {len(DHCP_INFO_CACHE['leases'])} leases, {len(DHCP_INFO_CACHE['static_devices'])} static devices loaded")
+            time.sleep(30)  # Update every 30 seconds
+        except Exception as e:
+            print(f"[ERROR] Cache update failed: {e}")
+            time.sleep(30)
+
+
+def get_dhcp_info():
+    """Get pools and leases from Kea socket with optimized parallel enrichment"""
+    info = {
+        "pools": [],
+        "leases": []
+    }
+    
+    # Get subnets and pools
+    subnets = get_subnets()
+    for subnet_id, subnet_info in subnets.items():
+        for pool in subnet_info.get("pools", []):
+            info["pools"].append({
+                "pool": pool,
+                "subnet": subnet_info.get("subnet"),
+                "dns_domain": subnet_info.get("dns_domain", "N/A")
+            })
+    
+    # Get leases from Kea socket
+    leases_by_ip = {}
+    try:
+        kea_socket = config.get('kea_socket', '/run/kea/kea4-ctrl-socket')
+        
+        if not Path(kea_socket).exists():
+            print("[ERROR] Kea socket not found")
+            return info
+        
+        client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        client.settimeout(5)
+        client.connect(kea_socket)
+        
+        # Request all leases
+        request = {"command": "lease4-get-all", "service": ["dhcp4"]}
+        client.sendall(json.dumps(request).encode())
+        
+        response = b""
+        while True:
+            chunk = client.recv(16384)
+            if not chunk:
+                break
+            response += chunk
+            try:
+                json.loads(response.decode())
+                break
+            except:
+                continue
+        
+        client.close()
+        
+        data = json.loads(response.decode())
+        
+        if isinstance(data, dict) and data.get("result") == 0:
+            leases = data.get("arguments", {}).get("leases", [])
+            print(f"[INFO] Retrieved {len(leases)} leases from Kea socket")
+            
+            for lease in leases:
+                ip = lease.get("ip-address")
+                if ip:
+                    hostname = lease.get("hostname", "")
+                    # If hostname is empty string, treat as N/A
+                    if not hostname or hostname.strip() == "":
+                        hostname = "N/A"
+                    hw_address = lease.get("hw-address")
+                    
+                    # Calculate expiration time (cltt + valid-lft)
+                    cltt = lease.get("cltt", 0)  # Client Last Transaction Time
+                    valid_lft = lease.get("valid-lft", 0)
+                    expire = cltt + valid_lft
+                    
+                    lease_info = {
+                        "ip_address": ip,
+                        "hostname": hostname,
+                        "hw_address": hw_address,
+                        "vendor": "Unknown",  # Will be updated async
+                        "device_type": "Unknown",  # Will be updated async
+                        "device_icon": "❓",  # Will be updated async
+                        "client_id": lease.get("client-id", ""),
+                        "valid_lft": valid_lft,
+                        "expire": expire,
+                        "state": str(lease.get("state", 0)),
+                        "subnet_id": str(lease.get("subnet-id", ""))
+                    }
+                    leases_by_ip[ip] = lease_info
+        else:
+            print(f"[WARN] Kea socket returned error: {data.get('text', 'Unknown error')}")
+        
+        info["leases"] = list(leases_by_ip.values())
+        
+        # Parallel enrichment of all leases
+        def enrich_lease_info():
+            with ThreadPoolExecutor(max_workers=20) as executor:
+                futures = {}
+                for lease in info["leases"]:
+                    future = executor.submit(enrich_single_lease, lease)
+                    futures[lease["ip_address"]] = future
+                
+                # Wait for all to complete
+                for ip, future in futures.items():
+                    try:
+                        future.result(timeout=5)
+                    except Exception as e:
+                        pass
+        
+        # Run enrichment in background thread
+        threading.Thread(target=enrich_lease_info, daemon=True).start()
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to get leases from Kea socket: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    return info
+
+
+def enrich_single_lease(lease):
+    """Enrich a single lease with vendor and device info"""
+    try:
+        ip = lease["ip_address"]
+        hostname = lease["hostname"]
+        hw_address = lease["hw_address"]
+        
+        # Try reverse DNS if no hostname (with timeout)
+        if hostname == "N/A":
+            try:
+                reverse_host = socket.gethostbyaddr(ip)
+                if reverse_host and reverse_host[0]:
+                    lease["hostname"] = reverse_host[0]
+                    hostname = reverse_host[0]
+            except:
+                pass
+        
+        # Get vendor (cached)
+        vendor = get_mac_vendor(hw_address)
+        lease["vendor"] = vendor
+        
+        # Get device type
+        device_icon, device_type = get_device_type(hostname, vendor, hw_address, ip)
+        lease["device_icon"] = device_icon
+        lease["device_type"] = device_type
+    except Exception as e:
+        pass
+
+
+def format_timestamp(timestamp):
+    """Convert Unix timestamp to human-readable format"""
+    try:
+        if timestamp and timestamp > 0:
+            return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+    except:
+        pass
+    return "N/A"
+
+
+class KeaHandler(http.server.SimpleHTTPRequestHandler):
+    """HTTP request handler for displaying Kea info"""
+    
+    def do_GET(self):
+        # Parse query parameters
+        from urllib.parse import urlparse, parse_qs
+        parsed = urlparse(self.path)
+        query_params = parse_qs(parsed.query)
+        lang = query_params.get('lang', ['fr'])[0]  # Default to French
+        
+        if parsed.path == "/" or parsed.path == "/index.html":
+            self.send_response(200)
+            self.send_header("Content-type", "text/html; charset=utf-8")
+            self.end_headers()
+            
+            # Use cached info for fast initial load, update in background
+            info = get_dhcp_info_cached()
+            html = generate_html(info, lang)
+            self.wfile.write(html.encode())
+        elif parsed.path == "/api/data":
+            # API endpoint for AJAX updates
+            self.send_response(200)
+            self.send_header("Content-type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            
+            info = get_dhcp_info_cached()
+            
+            # Enrich static devices with scanned data
+            static_devices = []
+            for device in info.get('static_devices', []):
+                ip = device['ip_address']
+                device_copy = device.copy()
+                
+                # Get enhanced data from scanner
+                with CACHE_LOCK:
+                    enhanced = STATIC_DEVICE_ENHANCED_DATA.get(ip, {})
+                
+                # Update with enhanced data if available
+                if enhanced.get('hostname') and device_copy.get('hostname') in ['N/A', None, '']:
+                    device_copy['hostname'] = enhanced['hostname']
+                if enhanced.get('mac') and device_copy.get('hw_address') in ['', None]:
+                    device_copy['hw_address'] = enhanced['mac']
+                if enhanced.get('vendor') and device_copy.get('vendor') in ['Unknown', None, '']:
+                    device_copy['vendor'] = enhanced['vendor']
+                
+                static_devices.append(device_copy)
+            
+            data = {
+                'pools': info.get('pools', []),
+                'leases': info.get('leases', []),
+                'static_devices': static_devices,
+                'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            self.wfile.write(json.dumps(data).encode())
+        elif parsed.path == "/api/stats":
+            # API endpoint for system stats
+            self.send_response(200)
+            self.send_header("Content-type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            
+            stats = get_system_stats()
+            self.wfile.write(json.dumps(stats).encode())
+        elif parsed.path.startswith("/static/"):
+            # Serve static files
+            file_path = parsed.path[1:]  # Remove leading /
+            full_path = os.path.join("/opt/ultimate-dashboard", file_path)
+            
+            if os.path.isfile(full_path):
+                self.send_response(200)
+                if file_path.endswith('.js'):
+                    self.send_header("Content-type", "application/javascript")
+                elif file_path.endswith('.css'):
+                    self.send_header("Content-type", "text/css")
+                else:
+                    self.send_header("Content-type", "text/plain")
+                self.end_headers()
+                
+                with open(full_path, 'rb') as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_response(404)
+                self.end_headers()
+        else:
+            self.send_response(404)
+            self.end_headers()
+    
+    def log_message(self, format, *args):
+        """Log HTTP requests"""
+        print(f"[{self.log_date_time_string()}] {format % args}")
+
+
+def generate_html(info, lang="fr"):
+    """Generate HTML page with Kea DHCPv4 information"""
+    
+    # Get translations
+    t = TRANSLATIONS.get(lang, TRANSLATIONS["fr"])
+    
+    # Get system hostname
+    system_hostname = socket.gethostname()
+    
+    pools_html = ""
+    for pool in info.get("pools", []):
+        pools_html += f"""
+        <tr>
+            <td>{escape(pool['pool'])}</td>
+            <td>{escape(pool['subnet'])}</td>
+            <td>{escape(pool.get('dns_domain', 'N/A'))}</td>
+        </tr>
+        """
+    
+    if not pools_html:
+        pools_html = f"<tr><td colspan='3'>{t['no_pools']}</td></tr>"
+    
+    # Build unified DHCP clients table with services
+    leases_html = ""
+    for lease in info.get("leases", []):
+        expire_time = format_timestamp(lease.get("expire"))
+        hostname = escape(lease.get("hostname", "N/A"))
+        vendor = escape(lease.get("vendor", "Unknown"))
+        device_icon = lease.get("device_icon", "❓")
+        device_type = lease.get("device_type", "Unknown")
+        state_class = "active" if lease.get("state") == "0" else "inactive"
+        ip = lease['ip_address']
+        
+        # Calculate lease start time (expire - valid_lifetime)
+        expire_ts = lease.get("expire", 0)
+        valid_lft = int(lease.get("valid_lft", 0)) if lease.get("valid_lft") else 0
+        start_ts = expire_ts - valid_lft if expire_ts and valid_lft else 0
+        start_time = format_timestamp(start_ts)
+        
+        # Get scan status and last scan time
+        with CACHE_LOCK:
+            services = NETWORK_SCAN_RESULTS.get(ip, [])
+            is_scanning = SCAN_IN_PROGRESS.get(ip, False)
+            last_scan = LAST_SCAN_TIME.get(ip, 0)
+        
+        # Calculate scan progress
+        if is_scanning:
+            scan_status = '<span title="Scan en cours" class="scan-icon">⏳</span>'
+            countdown_display = ''
+        elif last_scan > 0:
+            time_since_scan = int(time.time() - last_scan)
+            next_scan_in = max(0, 60 - time_since_scan)
+            if next_scan_in > 0:
+                scan_status = '<span title="En attente du prochain scan" class="scan-icon">⏱️</span>'
+                countdown_display = f'<span class="scan-countdown" data-ip="{ip}" data-next="{next_scan_in}">{next_scan_in}s</span>'
+            else:
+                scan_status = '<span title="En attente" class="scan-icon">🔄</span>'
+                countdown_display = ''
+        else:
+            scan_status = '<span title="Jamais scanné" class="scan-icon">❌</span>'
+            countdown_display = ''
+        
+        # Add pause button for individual scan (before status and countdown)
+        pause_btn = f'<button class="pauseIndividualBtn" data-ip="{ip}" title="Pause/Resume scan"><span class="pause-icon">⏸️</span></button>'
+        scan_status_with_btn = f'{pause_btn}{scan_status}{countdown_display}'
+        
+        # Get scanned services
+        services_html = ""
+        if services:
+            for svc in services:
+                port = svc['port']
+                service = svc['service']
+                service_link = format_service_link(ip, port, service)
+                services_html += f"<li>{service_link}</li>"
+        
+        services_col = f"<ul style='margin:0;padding-left:20px;'>{services_html}</ul>" if services_html else "<em class='no-service'>Aucun service</em>"
+        
+        # Check if custom SVG icon exists
+        custom_svg = get_custom_icon_svg(lease.get('hostname', ''))
+        if custom_svg:
+            icon_display = custom_svg
+        else:
+            icon_display = device_icon
+        
+        leases_html += f"""
+        <tr class="{state_class}">
+            <td style="font-size: 1.3em; text-align: center;" title="{device_type}">{icon_display}</td>
+            <td>{escape(ip)}</td>
+            <td>{hostname}</td>
+            <td>{escape(lease.get('hw_address', 'N/A'))}</td>
+            <td>{vendor}</td>
+            <td style="font-size: 0.85em;">{scan_status_with_btn}</td>
+            <td style="font-size: 0.9em;">{services_col}</td>
+            <td>{start_time}</td>
+            <td>{expire_time}</td>
+            <td>{lease.get('valid_lft', 'N/A')}s</td>
+        </tr>
+        """
+    
+    if not leases_html:
+        leases_html = "<tr><td colspan='10'>Aucun bail trouvé</td></tr>"
+    
+    # Build static devices table
+    static_devices_html = ""
+    for device in info.get("static_devices", []):
+        ip = device['ip_address']
+        device_cat = device.get("type", "static")
+        
+        # Try to get enhanced data from scanner first
+        with CACHE_LOCK:
+            enhanced = STATIC_DEVICE_ENHANCED_DATA.get(ip, {})
+        
+        # Use enhanced data if available, fallback to device data
+        hostname = enhanced.get('hostname') or device.get("hostname", "N/A")
+        if hostname == "N/A" or not hostname:
+            # Last resort: try reverse DNS
+            resolved = resolve_hostname(ip)
+            hostname = resolved if resolved else "N/A"
+        hostname = escape(hostname)
+        
+        # MAC address from enhanced data or device data
+        hw_address = enhanced.get('mac') or device.get('hw_address', 'N/A')
+        
+        # Vendor from enhanced data or device data
+        vendor = enhanced.get('vendor') or device.get("vendor", "Unknown")
+        vendor = escape(vendor)
+        
+        device_icon = device.get("device_icon", "🔧")
+        device_type = device.get("device_type", "Unknown")
+        
+        # Type badge
+        type_badge = f'<span class="badge badge-{device_cat}">{t.get(device_cat, device_cat.title())}</span>'
+        
+        # Get scan status and last scan time
+        with CACHE_LOCK:
+            services = NETWORK_SCAN_RESULTS.get(ip, [])
+            is_scanning = SCAN_IN_PROGRESS.get(ip, False)
+            last_scan = LAST_SCAN_TIME.get(ip, 0)
+        
+        # Calculate scan progress
+        if is_scanning:
+            scan_status = '<span title="Scan en cours" class="scan-icon">⏳</span>'
+            countdown_display = ''
+        elif last_scan > 0:
+            time_since_scan = int(time.time() - last_scan)
+            next_scan_in = max(0, 60 - time_since_scan)
+            if next_scan_in > 0:
+                scan_status = '<span title="En attente du prochain scan" class="scan-icon">⏱️</span>'
+                countdown_display = f'<span class="scan-countdown" data-ip="{ip}" data-next="{next_scan_in}">{next_scan_in}s</span>'
+            else:
+                scan_status = '<span title="En attente" class="scan-icon">🔄</span>'
+                countdown_display = ''
+        else:
+            scan_status = '<span title="Jamais scanné" class="scan-icon">❌</span>'
+            countdown_display = ''
+        
+        # Add pause button for individual scan
+        pause_btn = f'<button class="pauseIndividualBtn" data-ip="{ip}" title="Pause/Resume scan"><span class="pause-icon">⏸️</span></button>'
+        scan_status_with_btn = f'{pause_btn}{scan_status}{countdown_display}'
+        
+        # Get scanned services
+        services_html = ""
+        if services:
+            for svc in services:
+                port = svc['port']
+                service = svc['service']
+                service_link = format_service_link(ip, port, service)
+                services_html += f"<li>{service_link}</li>"
+        
+        services_col = f"<ul style='margin:0;padding-left:20px;'>{services_html}</ul>" if services_html else "<em class='no-service'>Aucun service</em>"
+        
+        static_devices_html += f"""
+        <tr>
+            <td style="font-size: 1.3em; text-align: center;" title="{device_type}">{device_icon}</td>
+            <td>{type_badge}</td>
+            <td>{escape(ip)}</td>
+            <td>{hostname}</td>
+            <td>{escape(hw_address)}</td>
+            <td>{vendor}</td>
+            <td style="font-size: 0.85em;">{scan_status_with_btn}</td>
+            <td style="font-size: 0.9em;">{services_col}</td>
+            <td>{escape(device.get('subnet', 'N/A'))}</td>
+        </tr>
+        """
+    
+    if not static_devices_html:
+        static_devices_html = f"<tr><td colspan='9'>{t['no_static_devices']}</td></tr>"
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Pinet DHCP Dashboard</title>
+        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23ebcb8b;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23d08770;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='15' fill='%231a1515'/%3E%3Ccircle cx='50' cy='30' r='8' fill='url(%23grad)'/%3E%3Ccircle cx='25' cy='55' r='6' fill='%23a3be8c'/%3E%3Ccircle cx='50' cy='55' r='6' fill='%23a3be8c'/%3E%3Ccircle cx='75' cy='55' r='6' fill='%23a3be8c'/%3E%3Ccircle cx='25' cy='75' r='6' fill='%2388c0d0'/%3E%3Ccircle cx='50' cy='75' r='6' fill='%2388c0d0'/%3E%3Ccircle cx='75' cy='75' r='6' fill='%2388c0d0'/%3E%3Cline x1='50' y1='38' x2='25' y2='49' stroke='url(%23grad)' stroke-width='2'/%3E%3Cline x1='50' y1='38' x2='50' y2='49' stroke='url(%23grad)' stroke-width='2'/%3E%3Cline x1='50' y1='38' x2='75' y2='49' stroke='url(%23grad)' stroke-width='2'/%3E%3Cline x1='25' y1='61' x2='25' y2='69' stroke='%23a3be8c' stroke-width='2'/%3E%3Cline x1='50' y1='61' x2='50' y2='69' stroke='%23a3be8c' stroke-width='2'/%3E%3Cline x1='75' y1='61' x2='75' y2='69' stroke='%23a3be8c' stroke-width='2'/%3E%3C/svg%3E">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+            * {{
+                box-sizing: border-box;
+            }}
+            body {{
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                margin: 0;
+                padding: 20px;
+                background: linear-gradient(135deg, #1a1515 0%, #2d2424 100%);
+                color: #e5e9f0;
+                min-height: 100vh;
+            }}
+            .container {{
+                max-width: 1600px;
+                margin: 0 auto;
+            }}
+            h1 {{
+                font-size: 2.5em;
+                margin: 0 0 10px 0;
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }}
+            .logo {{
+                width: 60px;
+                height: 60px;
+                flex-shrink: 0;
+            }}
+            h2 {{
+                color: #d08770;
+                border-bottom: 1px solid #d08770;
+                padding-bottom: 6px;
+                margin-top: 20px;
+                margin-bottom: 12px;
+                font-size: 1.1rem;
+                font-weight: 600;
+                text-shadow: none;
+            }}
+            .info {{
+                background: rgba(45, 36, 36, 0.4);
+                padding: 10px 15px;
+                border-radius: 4px;
+                margin-bottom: 15px;
+                border: 1px solid rgba(208, 135, 112, 0.2);
+                box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            }}
+            .timestamp {{
+                font-size: 0.8rem;
+                color: #d8dee9;
+                margin: 0;
+            }}
+            .info a {{
+                color: #ebcb8b;
+                text-decoration: none;
+                font-weight: bold;
+                transition: color 0.3s;
+            }}
+            .info a:hover {{
+                color: #d08770;
+                text-decoration: underline;
+            }}
+            .scan-status {{
+                display: inline-block;
+                padding: 3px 8px;
+                background: rgba(208, 135, 112, 0.15);
+                border: 1px solid rgba(208, 135, 112, 0.3);
+                border-radius: 3px;
+                font-size: 0.75rem;
+                margin-left: 10px;
+                color: #ebcb8b;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                background: rgba(45, 36, 36, 0.6);
+                margin-bottom: 20px;
+                border-radius: 4px;
+                overflow: hidden;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                border: 1px solid rgba(208, 135, 112, 0.2);
+                font-size: 0.875rem;
+            }}
+            th {{
+                background: linear-gradient(135deg, #3d3030 0%, #2d2424 100%);
+                color: #ebcb8b;
+                padding: 8px 10px;
+                text-align: left;
+                font-weight: 600;
+                cursor: pointer;
+                user-select: none;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                border-bottom: 1px solid #d08770;
+                transition: background 0.2s;
+            }}
+            th:hover {{
+                background: linear-gradient(135deg, #4d4040 0%, #3d3030 100%);
+            }}
+            th::after {{
+                content: " ⇅";
+                opacity: 0.3;
+                color: #d08770;
+                font-size: 0.7rem;
+            }}
+            td {{
+                padding: 6px 10px;
+                border-bottom: 1px solid rgba(208, 135, 112, 0.1);
+                vertical-align: middle;
+                color: #e5e9f0;
+                font-size: 0.8rem;
+            }}
+            tr:hover {{
+                background: rgba(61, 48, 48, 0.3);
+            }}
+            .active {{
+                background: rgba(163, 190, 140, 0.05);
+                border-left: 2px solid #a3be8c;
+            }}
+            .inactive {{
+                background: rgba(191, 97, 106, 0.05);
+                border-left: 2px solid #bf616a;
+            }}
+            a {{
+                color: #88c0d0;
+                text-decoration: none;
+                transition: color 0.3s;
+            }}
+            a:hover {{
+                color: #ebcb8b;
+                text-decoration: underline;
+            }}
+            .service-link {{
+                text-decoration: none;
+            }}
+            .no-service {{
+                font-style: italic;
+            }}
+            ul {{
+                margin: 0;
+                padding-left: 20px;
+                list-style: none;
+            }}
+            li {{
+                font-size: 0.75rem;
+                color: #d8dee9;
+                padding: 1px 0;
+            }}
+            li::before {{
+                content: "▸ ";
+                color: #d08770;
+                font-weight: 600;
+                font-size: 0.7rem;
+            }}
+            em {{
+                color: #88888888;
+                font-style: italic;
+            }}
+            /* Button & Settings Panel */
+            #pauseScanBtn {{
+                padding: 4px 10px;
+                border-radius: 4px;
+                border: 1px solid;
+                cursor: pointer;
+                font-size: 1.2em;
+                transition: all 0.2s;
+            }}
+            .pauseIndividualBtn {{
+                border: none;
+                background: transparent;
+                cursor: pointer;
+                font-size: 1.1em;
+                padding: 2px;
+                margin-right: 5px;
+                transition: all 0.2s;
+            }}
+            .pauseIndividualBtn:disabled {{
+                cursor: not-allowed;
+                opacity: 0.5;
+            }}
+            .scan-icon {{
+                margin-right: 3px;
+            }}
+            .scan-countdown {{
+                font-size: 0.9em;
+                margin-left: 3px;
+                font-weight: 500;
+            }}
+            .badge {{
+                display: inline-block;
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-size: 0.75em;
+                font-weight: 600;
+                text-transform: uppercase;
+            }}
+            .badge-reservation {{
+                background: rgba(163, 190, 140, 0.2);
+                color: #a3be8c;
+                border: 1px solid #a3be8c;
+            }}
+            .badge-static {{
+                background: rgba(136, 192, 208, 0.2);
+                color: #88c0d0;
+                border: 1px solid #88c0d0;
+            }}
+            #settingsBtn {{
+                padding: 6px 12px;
+                border: none;
+                border-radius: 4px;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 0.85rem;
+                transition: all 0.2s ease;
+            }}
+            #settingsPanel {{
+                border-radius: 4px;
+                padding: 15px;
+                margin: 15px 0;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                border: 1px solid;
+            }}
+            #settingsPanel h3 {{
+                margin-top: 0;
+                font-size: 1rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            #closeSettings {{
+                border: none;
+                border-radius: 3px;
+                padding: 3px 8px;
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 0.85rem;
+            }}
+            #settingsPanel label {{
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 600;
+            }}
+            #settingsPanel p {{
+                font-size: 0.9em;
+                margin-top: 15px;
+            }}
+            .refresh-option, .theme-option, .lang-option {{
+                padding: 6px 12px;
+                border: 1px solid;
+                border-radius: 4px;
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 0.8rem;
+                transition: all 0.2s;
+            }}
+            #refreshCounter {{
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 4px 10px;
+                border: 1px solid;
+                border-radius: 16px;
+                cursor: default;
+                transition: all 0.2s ease;
+            }}
+            #countdown {{
+                font-size: 0.75rem;
+                font-weight: 600;
+                min-width: 18px;
+                font-family: 'Inter', monospace;
+            }}
+            /* System Monitoring Gauges */
+            .gauge-container {{
+                padding: 8px;
+                border: 1px solid;
+                border-radius: 4px;
+                text-align: center;
+            }}
+            .stat-label {{
+                font-size: 0.7rem;
+                font-weight: 600;
+                margin-bottom: 4px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }}
+            .gauge {{
+                width: 100%;
+                height: auto;
+                margin: 6px 0;
+            }}
+            .gauge-single {{
+                width: 100%;
+                max-width: 125px;
+                height: auto;
+            }}
+            .gauge-bg {{
+                stroke-linecap: round;
+                transition: stroke 0.3s;
+            }}
+            .gauge-fill, .gauge-fill-send, .gauge-fill-recv {{
+                stroke-linecap: round;
+                transition: stroke 0.3s, stroke-dasharray 0.5s ease;
+            }}
+            .gauge-value {{
+                font-size: 13px;
+                font-weight: 700;
+                text-anchor: middle;
+                transition: fill 0.3s;
+            }}
+            .gauge-legend {{
+                font-size: 0.75rem;
+                margin-top: 6px;
+                font-weight: 500;
+            }}
+            .gauge-container {{
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: space-between;
+                height: 128px;
+                padding: 15px;
+            }}
+            /* Scrollbar styling */
+            ::-webkit-scrollbar {{
+                width: 12px;
+                height: 12px;
+            }}
+            ::-webkit-scrollbar-track {{
+                background: #1a1515;
+                border-radius: 6px;
+            }}
+            ::-webkit-scrollbar-thumb {{
+                background: #d08770;
+                border-radius: 6px;
+            }}
+            ::-webkit-scrollbar-thumb:hover {{
+                background: #ebcb8b;
+            }}
+            @keyframes spin {{
+                from {{ transform: rotate(0deg); }}
+                to {{ transform: rotate(360deg); }}
+            }}
+            #refreshIcon {{
+                transform-origin: center;
+                transform-box: fill-box;
+            }}
+        </style>
+        <style id="themeStyle">
+            {get_theme_css('ember')}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>
+                <svg class="logo" xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>
+                    <defs>
+                        <linearGradient id='grad-logo' x1='0%' y1='0%' x2='100%' y2='100%'>
+                            <stop offset='0%' style='stop-color:#ebcb8b;stop-opacity:1' />
+                            <stop offset='100%' style='stop-color:#d08770;stop-opacity:1' />
+                        </linearGradient>
+                    </defs>
+                    <rect width='100' height='100' rx='15' fill='#2d2424'/>
+                    <circle cx='50' cy='30' r='8' fill='url(#grad-logo)'/>
+                    <circle cx='25' cy='55' r='6' fill='#a3be8c'/>
+                    <circle cx='50' cy='55' r='6' fill='#a3be8c'/>
+                    <circle cx='75' cy='55' r='6' fill='#a3be8c'/>
+                    <circle cx='25' cy='75' r='6' fill='#88c0d0'/>
+                    <circle cx='50' cy='75' r='6' fill='#88c0d0'/>
+                    <circle cx='75' cy='75' r='6' fill='#88c0d0'/>
+                    <line x1='50' y1='38' x2='25' y2='49' stroke='url(#grad-logo)' stroke-width='2'/>
+                    <line x1='50' y1='38' x2='50' y2='49' stroke='url(#grad-logo)' stroke-width='2'/>
+                    <line x1='50' y1='38' x2='75' y2='49' stroke='url(#grad-logo)' stroke-width='2'/>
+                    <line x1='25' y1='61' x2='25' y2='69' stroke='#a3be8c' stroke-width='2'/>
+                    <line x1='50' y1='61' x2='50' y2='69' stroke='#a3be8c' stroke-width='2'/>
+                    <line x1='75' y1='61' x2='75' y2='69' stroke='#a3be8c' stroke-width='2'/>
+                </svg>
+                {system_hostname.upper()} Ultimate Kea DHCP Dashboard
+            </h1>
+            
+            <div class="info">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <p class="timestamp">{t['last_update']}: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+                        <p style="display: flex; align-items: center; gap: 15px;">
+                            <button id="pauseScanBtn" title="Mettre en pause le scan"><span class="pause-icon">⏸️</span></button>
+                            <span class="scan-status scanning" id="scanStatus">Scan réseau actif</span>
+                            <span id="refreshCounter">
+                                <svg id="refreshIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="animation: spin 4s linear infinite;"><path d="M12 2C12 2 12 6 12 6M12 22C12 22 12 18 12 18M22 12C22 12 18 12 18 12M2 12C2 12 6 12 6 12M19.07 4.93C19.07 4.93 16.24 7.76 16.24 7.76M4.93 19.07C4.93 19.07 7.76 16.24 7.76 16.24M19.07 19.07C19.07 19.07 16.24 16.24 16.24 16.24M4.93 4.93C4.93 4.93 7.76 7.76 7.76 7.76" stroke="#88c0d0" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="3" fill="#88c0d0"/></svg>
+                                <span id="countdown">5s</span>
+                            </span>
+                            <button id="settingsBtn">⚙️ {t['settings']}</button>
+                        </p>
+                    </div>
+                    
+                    <!-- System Monitoring Gauges -->
+                    <div style="display: flex; gap: 10px; align-items: flex-start; flex-wrap: nowrap; overflow-x: auto;">
+                        <div class="stat-box gauge-container" style="flex: 1 1 auto; min-width: 140px;">
+                            <div class="stat-label">CPU CORE 0</div>
+                            <svg class="gauge gauge-single" viewBox="0 0 100 60" id="cpu0Gauge">
+                                <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="8" fill="none"/>
+                                <path class="gauge-fill cpu-core-0-fill" id="cpu0GaugeFill" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="8" fill="none" stroke-dasharray="0 251"/>
+                                <text class="gauge-value" x="50" y="45" id="cpu0GaugeValue">0%</text>
+                            </svg>
+                            <div class="gauge-legend">Core 0</div>
+                        </div>
+                        <div class="stat-box gauge-container" style="flex: 1 1 auto; min-width: 140px;">
+                            <div class="stat-label">CPU CORE 1</div>
+                            <svg class="gauge gauge-single" viewBox="0 0 100 60" id="cpu1Gauge">
+                                <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="8" fill="none"/>
+                                <path class="gauge-fill cpu-core-1-fill" id="cpu1GaugeFill" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="8" fill="none" stroke-dasharray="0 251"/>
+                                <text class="gauge-value" x="50" y="45" id="cpu1GaugeValue">0%</text>
+                            </svg>
+                            <div class="gauge-legend">Core 1</div>
+                        </div>
+                        <div class="stat-box gauge-container" style="flex: 1 1 auto; min-width: 140px;">
+                            <div class="stat-label">CPU CORE 2</div>
+                            <svg class="gauge gauge-single" viewBox="0 0 100 60" id="cpu2Gauge">
+                                <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="8" fill="none"/>
+                                <path class="gauge-fill cpu-core-2-fill" id="cpu2GaugeFill" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="8" fill="none" stroke-dasharray="0 251"/>
+                                <text class="gauge-value" x="50" y="45" id="cpu2GaugeValue">0%</text>
+                            </svg>
+                            <div class="gauge-legend">Core 2</div>
+                        </div>
+                        <div class="stat-box gauge-container" style="flex: 1 1 auto; min-width: 140px;">
+                            <div class="stat-label">CPU CORE 3</div>
+                            <svg class="gauge gauge-single" viewBox="0 0 100 60" id="cpu3Gauge">
+                                <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="8" fill="none"/>
+                                <path class="gauge-fill cpu-core-3-fill" id="cpu3GaugeFill" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="8" fill="none" stroke-dasharray="0 251"/>
+                                <text class="gauge-value" x="50" y="45" id="cpu3GaugeValue">0%</text>
+                            </svg>
+                            <div class="gauge-legend">Core 3</div>
+                        </div>
+                        <div class="stat-box gauge-container" style="flex: 1 1 auto; min-width: 140px;">
+                            <div class="stat-label">RAM</div>
+                            <svg class="gauge gauge-single" viewBox="0 0 100 60" id="ramGauge">
+                                <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="8" fill="none"/>
+                                <path class="gauge-fill" id="ramGaugeFill" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="8" fill="none" stroke-dasharray="0 251"/>
+                                <text class="gauge-value" x="50" y="45" id="ramGaugeValue">0%</text>
+                            </svg>
+                            <div class="gauge-legend" id="ramLegend">0 / 0 GB</div>
+                        </div>
+                        <div class="stat-box gauge-container" style="flex: 1 1 auto; min-width: 140px;">
+                            <div class="stat-label">NET</div>
+                            <svg class="gauge gauge-single" viewBox="0 0 100 60" id="netGauge">
+                                <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="8" fill="none"/>
+                                <path class="gauge-fill-send" id="netGaugeFillSend" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="4" fill="none" stroke-dasharray="0 251"/>
+                                <path class="gauge-fill-recv" id="netGaugeFillRecv" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="4" fill="none" stroke-dasharray="0 251"/>
+                                <text class="gauge-value" x="50" y="45" id="netGaugeValue">0</text>
+                            </svg>
+                            <div class="gauge-legend" id="netLegend">↑0 ↓0 Mbps</div>
+                        </div>
+                        <div class="stat-box gauge-container" style="flex: 1 1 auto; min-width: 140px;">
+                            <div class="stat-label">DISK</div>
+                            <svg class="gauge gauge-single" viewBox="0 0 100 60" id="diskGauge">
+                                <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="8" fill="none"/>
+                                <path class="gauge-fill" id="diskGaugeFill" d="M 10 50 A 40 40 0 0 1 90 50" stroke-width="8" fill="none" stroke-dasharray="0 251"/>
+                                <text class="gauge-value" x="50" y="45" id="diskGaugeValue">0%</text>
+                            </svg>
+                            <div class="gauge-legend" id="diskLegend">0 / 0 GB</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Settings Panel -->
+            <div id="settingsPanel" style="display: none;">
+                <h3 style="margin-top: 0; color: #ebcb8b; display: flex; justify-content: space-between; align-items: center;">
+                    ⚙️ {t['settings_title']}
+                    <button id="closeSettings">✕</button>
+                </h3>
+                <div style="margin: 15px 0;">
+                    <label>
+                        🔄 {t['refresh_speed']}:
+                    </label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="refresh-option" data-interval="1000">1s</button>
+                        <button class="refresh-option" data-interval="5000">5s</button>
+                        <button class="refresh-option" data-interval="10000">10s</button>
+                        <button class="refresh-option" data-interval="30000">30s</button>
+                    </div>
+                </div>
+                <div style="margin: 15px 0; padding-top: 15px; border-top: 1px solid #4c566a;">
+                    <label>
+                        🎨 {t['theme']}:
+                    </label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="theme-option" data-theme="ember">
+                            Ember
+                        </button>
+                        <button class="theme-option" data-theme="twilight">
+                            Twilight
+                        </button>
+                        <button class="theme-option" data-theme="frost">
+                            Frost
+                        </button>
+                        <button class="theme-option" data-theme="blossom">
+                            Blossom
+                        </button>
+                        <button class="theme-option" data-theme="clarity">
+                            Clarity
+                        </button>
+                        <button class="theme-option" data-theme="pulse">
+                            Pulse
+                        </button>
+                    </div>
+                </div>
+                <div style="margin: 15px 0; padding-top: 15px; border-top: 1px solid #4c566a;">
+                    <label>
+                        🌐 {t['language']}:
+                    </label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="lang-option" data-lang="fr">🇫🇷 Français</button>
+                        <button class="lang-option" data-lang="en">🇬🇧 English</button>
+                        <button class="lang-option" data-lang="es">🇪🇸 Español</button>
+                        <button class="lang-option" data-lang="de">🇩🇪 Deutsch</button>
+                        <button class="lang-option" data-lang="th">🇹🇭 ไทย</button>
+                    </div>
+                </div>
+                <p style="color: #88c0d0; font-size: 0.9em; margin-top: 15px;">💡 {t['auto_saved']}</p>
+            </div>
+            
+            <h2>{t['dhcp_pools']}</h2>
+            <table id="poolsTable">
+                <thead>
+                    <tr>
+                        <th>{t['pool']}</th>
+                        <th>{t['subnet']}</th>
+                        <th>{t['dns_domain']}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {pools_html}
+                </tbody>
+            </table>
+            
+            <h2>{t['dhcp_clients']} ({len(info.get('leases', []))} {t['clients']})</h2>
+            <table id="leasesTable">
+                <thead>
+                    <tr>
+                        <th>{t['type']}</th>
+                        <th>{t['ip_address']}</th>
+                        <th>{t['hostname']}</th>
+                        <th>{t['mac_address']}</th>
+                        <th>{t['vendor']}</th>
+                        <th>{t['scan_status_col']}</th>
+                        <th>{t['services']}</th>
+                        <th>{t['lease_start']}</th>
+                        <th>{t['expiration']}</th>
+                        <th>{t['duration']}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {leases_html}
+                </tbody>
+            </table>
+            
+            <h2>{t['static_devices']} ({len(info.get('static_devices', []))} {t['devices']})</h2>
+            <table id="staticDevicesTable">
+                <thead>
+                    <tr>
+                        <th>{t['type']}</th>
+                        <th>Catégorie</th>
+                        <th>{t['ip_address']}</th>
+                        <th>{t['hostname']}</th>
+                        <th>{t['mac_address']}</th>
+                        <th>{t['vendor']}</th>
+                        <th>{t['scan_status_col']}</th>
+                        <th>{t['services']}</th>
+                        <th>{t['subnet']}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {static_devices_html}
+                </tbody>
+            </table>
+        </div>
+        
+        <script src="/static/js/gauges.js"></script>
+        <script>
+            // Settings and state management
+            let settings = {{
+                refreshInterval: 5000,
+                theme: 'ember',
+                lang: 'fr',
+                scanEnabled: true,  // Scan enabled by default
+                sortState: {{
+                    poolsTable: {{ column: null, direction: 'asc' }},
+                    leasesTable: {{ column: null, direction: 'asc' }},
+                    staticDevicesTable: {{ column: null, direction: 'asc' }}
+                }}
+            }};
+            
+            let refreshTimer = null;
+            let countdownTimer = null;
+            let timeLeft = 5;
+            let pausedIPs = new Set();
+            let scanPaused = false;
+            
+            // Theme definitions (matching Python)
+            const themes = {{
+                ember: {{ bg_primary: '#1a1515', bg_secondary: '#2d2424', text_primary: '#d8dee9', accent_primary: '#c97558', accent_secondary: '#d4a574', success: '#a3be8c', error: '#bf616a', info: '#88c0d0', border: '#3b3030', hover: '#3d3333', scrollbar: '#c97558', font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", th_shadow: '0 2px 8px rgba(201,117,88,0.15)', th_bg: 'rgba(201,117,88,0.15)', th_text: '#d4a574' }},
+                twilight: {{ bg_primary: '#282a36', bg_secondary: '#44475a', text_primary: '#f8f8f2', accent_primary: '#9580c4', accent_secondary: '#d97fb0', success: '#50fa7b', error: '#ff5555', info: '#8be9fd', border: '#6272a4', hover: '#44475a', scrollbar: '#bd93f9', font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", th_shadow: '0 2px 8px rgba(189,147,249,0.2)', th_bg: 'rgba(149,128,196,0.12)', th_text: '#bd93f9' }},
+                frost: {{ bg_primary: '#2e3440', bg_secondary: '#3b4252', text_primary: '#eceff4', accent_primary: '#7cb0c8', accent_secondary: '#83b5b0', success: '#a3be8c', error: '#bf616a', info: '#5e81ac', border: '#4c566a', hover: '#434c5e', scrollbar: '#88c0d0', font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", th_shadow: '0 2px 8px rgba(136,192,208,0.15)', th_bg: 'rgba(124,176,200,0.1)', th_text: '#8fbcbb' }},
+                blossom: {{ bg_primary: '#1e1e2e', bg_secondary: '#2d2a3e', text_primary: '#e5c7ed', accent_primary: '#d88c92', accent_secondary: '#e39b6f', success: '#a6da95', error: '#ed8796', info: '#8aadf4', border: '#494d64', hover: '#363a4f', scrollbar: '#ee99a0', font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", th_shadow: '0 2px 8px rgba(238,153,160,0.18)', th_bg: 'rgba(216,140,146,0.1)', th_text: '#f5a97f' }},
+                clarity: {{ bg_primary: '#ffffff', bg_secondary: '#f5f5f5', text_primary: '#1a1a1a', accent_primary: '#0070DD', accent_secondary: '#0095EE', success: '#00C853', error: '#E53935', info: '#0080FF', border: '#e0e0e0', hover: '#eeeeee', scrollbar: '#0080FF', font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", th_shadow: '0 2px 4px rgba(0,112,221,0.12)', th_bg: 'rgba(0,112,221,0.06)', th_text: '#0070DD' }},
+                pulse: {{ bg_primary: '#0c0d0f', bg_secondary: '#161b22', text_primary: '#c9d1d9', text_secondary: '#8b949e', accent_primary: '#00ab44', accent_secondary: '#35d07f', success: '#00ab44', error: '#ff4136', info: '#00b5db', border: '#21262d', hover: '#1c2128', scrollbar: '#00ab44', font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", th_shadow: '0 1px 3px rgba(0,0,0,0.3)', th_bg: '#161b22', th_text: '#8b949e' }}
+            }};
+            
+            // Apply theme CSS
+            function applyTheme(themeName) {{
+                const theme = themes[themeName] || themes.ember;
+                const isLight = themeName === 'clarity';
+                const shadowOpacity = isLight ? '0.1' : '0.2';
+                
+                const css = `
+                    body {{
+                        background: linear-gradient(135deg, ${{theme.bg_primary}}, ${{theme.bg_secondary}});
+                        color: ${{theme.text_primary}};
+                        font-family: ${{theme.font}};
+                    }}
+                    .container {{
+                        background: transparent;
+                        border-color: ${{theme.border}};
+                    }}
+                    h1, h2 {{
+                        color: ${{theme.accent_secondary}};
+                        font-family: ${{theme.font}};
+                    }}
+                    table {{
+                        background: ${{theme.bg_secondary}};
+                        border-color: ${{theme.border}};
+                    }}
+                    th {{
+                        background: ${{theme.th_bg}};
+                        color: ${{theme.th_text}};
+                        font-weight: 600;
+                        box-shadow: ${{theme.th_shadow}};
+                        border-bottom: 1px solid ${{theme.accent_primary}};
+                    }}
+                    th:hover {{
+                        background: ${{theme.hover}};
+                        color: ${{theme.accent_secondary}};
+                    }}
+                    tr:hover {{
+                        background: ${{theme.hover}};
+                    }}
+                    tr.active {{
+                        border-left-color: ${{theme.success}};
+                    }}
+                    tr.inactive {{
+                        border-left-color: ${{theme.error}};
+                    }}
+                    td {{
+                        border-bottom-color: ${{theme.border}};
+                        color: ${{theme.text_primary}};
+                    }}
+                    a {{
+                        color: ${{theme.info}};
+                    }}
+                    a:hover {{
+                        color: ${{theme.accent_secondary}};
+                    }}
+                    .timestamp {{
+                        color: ${{theme.text_secondary || theme.text_primary}};
+                    }}
+                    .info {{
+                        background: ${{theme.bg_secondary}};
+                        border-color: ${{theme.border}};
+                    }}
+                    .info a {{
+                        color: ${{theme.info}};
+                    }}
+                    .info a:hover {{
+                        color: ${{theme.accent_secondary}};
+                    }}
+                    .gauge-container {{
+                        border-color: ${{theme.border}};
+                        background: rgba(${{parseInt(theme.bg_secondary.slice(1,3), 16)}}, ${{parseInt(theme.bg_secondary.slice(3,5), 16)}}, ${{parseInt(theme.bg_secondary.slice(5,7), 16)}}, 0.5);
+                    }}
+                    .stat-label {{
+                        color: ${{theme.text_secondary || theme.text_primary}};
+                    }}
+                    .gauge-bg {{
+                        stroke: ${{theme.border}};
+                    }}
+                    .gauge-value {{
+                        fill: ${{theme.text_primary}};
+                    }}
+                    .gauge-legend {{
+                        color: ${{theme.text_primary}};
+                    }}
+                    #cpuGaugeFill {{
+                        stroke: ${{theme.success}};
+                    }}
+                    #ramGaugeFill {{
+                        stroke: ${{theme.info}};
+                    }}
+                    #netGaugeFillSend {{
+                        stroke: ${{theme.success}};
+                    }}
+                    #netGaugeFillRecv {{
+                        stroke: ${{theme.accent_primary}};
+                    }}
+                    #diskGaugeFill {{
+                        stroke: ${{theme.error}};
+                    }}
+                    .scan-status {{
+                        border-color: ${{theme.accent_primary}};
+                        color: ${{theme.accent_secondary}};
+                    }}
+                    h2 {{
+                        border-bottom-color: ${{theme.accent_primary}};
+                    }}
+                    th::after {{
+                        color: ${{theme.accent_primary}};
+                    }}
+                    li {{
+                        color: ${{theme.text_primary}};
+                    }}
+                    li::before {{
+                        color: ${{theme.accent_primary}};
+                    }}
+                    .service-link {{
+                        color: ${{theme.info}};
+                    }}
+                    .service-link:hover {{
+                        color: ${{theme.accent_secondary}};
+                    }}
+                    .no-service {{
+                        color: ${{theme.text_secondary || theme.text_primary}};
+                    }}
+                    #settingsPanel {{
+                        background: ${{theme.bg_secondary}};
+                        border-color: ${{theme.accent_primary}};
+                    }}
+                    #settingsPanel h3 {{
+                        color: ${{theme.accent_secondary}};
+                    }}
+                    #settingsPanel label {{
+                        color: ${{theme.text_primary}};
+                    }}
+                    #settingsPanel p {{
+                        color: ${{theme.info}};
+                    }}
+                    #pauseScanBtn {{
+                        background: ${{theme.bg_secondary}};
+                        border-color: ${{theme.info}};
+                        color: ${{theme.text_primary}};
+                    }}
+                    .pauseIndividualBtn {{
+                        color: ${{theme.text_primary}};
+                    }}
+                    .pauseIndividualBtn:hover {{
+                        color: ${{theme.info}};
+                    }}
+                    .badge-reservation {{
+                        background: rgba(${{theme.success.replace('#', '')}}, 0.2);
+                        color: ${{theme.success}};
+                        border-color: ${{theme.success}};
+                    }}
+                    .badge-static {{
+                        background: rgba(${{theme.info.replace('#', '')}}, 0.2);
+                        color: ${{theme.info}};
+                        border-color: ${{theme.info}};
+                    }}
+                    #settingsBtn {{
+                        background: linear-gradient(135deg, ${{theme.accent_primary}}, ${{theme.accent_secondary}});
+                        color: ${{theme.bg_primary}};
+                    }}
+                    #closeSettings {{
+                        background: ${{theme.error}};
+                        color: ${{theme.text_primary}};
+                    }}
+                    .refresh-option, .theme-option, .lang-option {{
+                        background: ${{theme.bg_secondary}};
+                        border-color: ${{theme.border}};
+                        color: ${{theme.text_primary}};
+                    }}
+                    #refreshIcon path, #refreshIcon circle {{
+                        stroke: ${{theme.info}};
+                        fill: ${{theme.info}};
+                    }}
+                    #countdown {{
+                        color: ${{theme.info}};
+                    }}
+                    #refreshCounter {{
+                        border-color: ${{theme.info}};
+                    }}
+                    h1 {{
+                        color: ${{theme.accent_secondary}};
+                    }}
+                    ::-webkit-scrollbar-thumb {{
+                        background: ${{theme.scrollbar}};
+                    }}
+                    ::-webkit-scrollbar-track {{
+                        background: ${{theme.bg_primary}};
+                    }}
+                `;
+                
+                const styleEl = document.getElementById('themeStyle');
+                if (styleEl) {{
+                    styleEl.textContent = css;
+                }}
+            }}
+            
+            // Get themed pause icon SVG
+            function getThemedPauseIcon() {{
+                const theme = themes[settings.theme] || themes.ember;
+                return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="4" width="4" height="16" rx="1" fill="${{theme.info}}"/>
+                    <rect x="14" y="4" width="4" height="16" rx="1" fill="${{theme.info}}"/>
+                </svg>`;
+            }}
+            
+            // Get themed play icon SVG
+            function getThemedPlayIcon() {{
+                const theme = themes[settings.theme] || themes.ember;
+                return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 5v14l11-7z" fill="${{theme.success}}"/>
+                </svg>`;
+            }}
+            
+            // Update all pause/play icons with current theme
+            function updatePausePlayIcons() {{
+                const pauseIcon = getThemedPauseIcon();
+                const playIcon = getThemedPlayIcon();
+                
+                // Update global pause button
+                const globalBtn = document.getElementById('pauseScanBtn');
+                if (globalBtn) {{
+                    const iconSpan = globalBtn.querySelector('.pause-icon');
+                    if (iconSpan) {{
+                        iconSpan.innerHTML = scanPaused ? playIcon : pauseIcon;
+                    }}
+                }}
+                
+                // Update individual pause buttons
+                document.querySelectorAll('.pauseIndividualBtn').forEach(btn => {{
+                    const ip = btn.dataset.ip;
+                    const isPaused = pausedIPs.has(ip);
+                    const iconSpan = btn.querySelector('.pause-icon');
+                    if (iconSpan) {{
+                        if (scanPaused) {{
+                            iconSpan.innerHTML = playIcon;
+                        }} else {{
+                            iconSpan.innerHTML = isPaused ? playIcon : pauseIcon;
+                        }}
+                    }}
+                }});
+            }}
+            
+            // Update scan countdowns in table
+            function updateScanCountdowns() {{
+                document.querySelectorAll('.scan-countdown').forEach(el => {{
+                    const ip = el.dataset.ip;
+                    let nextScan = parseInt(el.dataset.next);
+                    
+                    if (!isNaN(nextScan) && nextScan > 0) {{
+                        nextScan--;
+                        el.dataset.next = nextScan;
+                        el.textContent = nextScan + 's';
+                        
+                        if (nextScan <= 0) {{
+                            el.textContent = '0s';
+                        }}
+                    }}
+                }});
+            }}
+            
+            // Load settings from localStorage
+            function loadSettings() {{
+                const saved = localStorage.getItem('dashboardSettings');
+                if (saved) {{
+                    try {{
+                        settings = JSON.parse(saved);
+                        console.log('Loaded settings:', settings);
+                    }} catch(e) {{
+                        console.error('Failed to load settings:', e);
+                    }}
+                }}
+                updateRefreshIntervalUI();
+                updateThemeUI();
+                updateLangUI();
+                applyTheme(settings.theme || 'ember');
+            }}
+            
+            // Save settings to localStorage
+            function saveSettings() {{
+                localStorage.setItem('dashboardSettings', JSON.stringify(settings));
+                console.log('Saved settings:', settings);
+            }}
+            
+            // Update UI to reflect current theme
+            function updateThemeUI() {{
+                document.querySelectorAll('.theme-option').forEach(btn => {{
+                    const theme = btn.dataset.theme;
+                    if (theme === settings.theme) {{
+                        btn.style.opacity = '1';
+                        btn.style.transform = 'scale(1.05)';
+                        btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                    }} else {{
+                        btn.style.opacity = '0.7';
+                        btn.style.transform = 'scale(1)';
+                        btn.style.boxShadow = 'none';
+                    }}
+                }});
+            }}
+            
+            // Update UI to reflect current language
+            function updateLangUI() {{
+                document.querySelectorAll('.lang-option').forEach(btn => {{
+                    const lang = btn.dataset.lang;
+                    if (lang === settings.lang) {{
+                        btn.style.background = 'linear-gradient(135deg, #88c0d0, #8fbcbb)';
+                        btn.style.borderColor = '#88c0d0';
+                        btn.style.color = '#1a1515';
+                    }} else {{
+                        btn.style.background = '#3b4252';
+                        btn.style.borderColor = '#4c566a';
+                        btn.style.color = '#d8dee9';
+                    }}
+                }});
+            }}
+            
+            // Update UI to reflect current refresh interval
+            function updateRefreshIntervalUI() {{
+                document.querySelectorAll('.refresh-option').forEach(btn => {{
+                    const interval = parseInt(btn.dataset.interval);
+                    if (interval === settings.refreshInterval) {{
+                        btn.style.background = 'linear-gradient(135deg, #d08770, #ebcb8b)';
+                        btn.style.borderColor = '#ebcb8b';
+                        btn.style.color = '#1a1515';
+                    }} else {{
+                        btn.style.background = '#3b4252';
+                        btn.style.borderColor = '#4c566a';
+                        btn.style.color = '#d8dee9';
+                    }}
+                }});
+            }}
+            
+            // Countdown display with animated icon
+            function updateCountdown() {{
+                const countdownEl = document.getElementById('countdown');
+                
+                // Update countdown text
+                if (countdownEl) {{
+                    countdownEl.textContent = timeLeft + 's';
+                }}
+                
+                timeLeft--;
+                
+                if (timeLeft < 0) {{
+                    timeLeft = Math.floor(settings.refreshInterval / 1000);
+                }}
+            }}
+            
+            // Start refresh cycle
+            function startRefreshCycle() {{
+                // Clear existing timers
+                if (refreshTimer) clearInterval(refreshTimer);
+                if (countdownTimer) clearInterval(countdownTimer);
+                
+                // Reset countdown
+                timeLeft = Math.floor(settings.refreshInterval / 1000);
+                updateCountdown();
+                
+                // Start countdown timer (every second)
+                countdownTimer = setInterval(() => {{
+                    updateCountdown();
+                    updateScanCountdowns();
+                }}, 1000);
+                
+                // Start refresh timer
+                refreshTimer = setInterval(updateTables, settings.refreshInterval);
+                
+                console.log(`Refresh cycle started: ${{settings.refreshInterval}}ms`);
+            }}
+            
+            // Apply saved sort to a table
+            function applySavedSort(tableId) {{
+                const saved = settings.sortState[tableId];
+                if (saved && saved.column !== null) {{
+                    const table = document.getElementById(tableId);
+                    if (table) {{
+                        sortTable(table, saved.column, saved.direction);
+                    }}
+                }}
+            }}
+            
+            // Update tables with AJAX
+            function updateTables() {{
+                fetch('/api/data')
+                    .then(response => response.json())
+                    .then(data => {{
+                        // Update timestamp
+                        const timestampEl = document.querySelector('.timestamp');
+                        if (timestampEl) {{
+                            timestampEl.textContent = `Dernière mise à jour: ${{data.timestamp}}`;
+                        }}
+                        
+                        // Reset countdown
+                        timeLeft = Math.floor(settings.refreshInterval / 1000);
+                        
+                        // Update tables but preserve sort
+                        updatePoolsTable(data.pools);
+                        updateLeasesTable(data.leases);
+                        updateStaticDevicesTable(data.static_devices || []);
+                    }})
+                    .catch(err => console.log('Update error:', err));
+            }}
+            
+            // Save paused IPs to settings
+            function savePausedIPs() {{
+                settings.pausedIPs = Array.from(pausedIPs);
+                saveSettings();
+            }}
+            
+            // Restore individual pause states after table refresh
+            function restoreIndividualPauseStates() {{
+                const pauseIcon = getThemedPauseIcon();
+                const playIcon = getThemedPlayIcon();
+                
+                document.querySelectorAll('.pauseIndividualBtn').forEach(btn => {{
+                    const ip = btn.dataset.ip;
+                    const iconSpan = btn.querySelector('.pause-icon');
+                    
+                    if (pausedIPs.has(ip)) {{
+                        if (iconSpan) iconSpan.innerHTML = playIcon;
+                        btn.title = 'Scan en pause';
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                    }} else {{
+                        if (iconSpan) iconSpan.innerHTML = pauseIcon;
+                        btn.title = 'Mettre en pause le scan';
+                        btn.disabled = scanPaused;
+                        btn.style.opacity = scanPaused ? '0.5' : '1';
+                    }}
+                }});
+                
+                // Update scan countdowns
+                updateScanCountdowns();
+            }}
+            
+            function updatePoolsTable(pools) {{
+                const tbody = document.querySelector('#poolsTable tbody');
+                if (!tbody) return;
+                
+                let html = '';
+                if (pools.length === 0) {{
+                    html = '<tr><td colspan="3">Aucun pool trouvé</td></tr>';
+                }} else {{
+                    pools.forEach(pool => {{
+                        html += `<tr>
+                            <td>${{pool.pool || ''}}</td>
+                            <td>${{pool.subnet || ''}}</td>
+                            <td>${{pool.dns_domain || 'N/A'}}</td>
+                        </tr>`;
+                    }});
+                }}
+                
+                tbody.innerHTML = html;
+                applySavedSort('poolsTable');
+            }}
+            
+            function updateLeasesTable(leases) {{
+                const tbody = document.querySelector('#leasesTable tbody');
+                if (!tbody) return;
+                
+                // Update via full page method to keep server-side rendering (SVG icons, services)
+                fetch(window.location.href)
+                    .then(response => response.text())
+                    .then(html => {{
+                        const parser = new DOMParser();
+                        const newDoc = parser.parseFromString(html, 'text/html');
+                        
+                        const newTable = newDoc.getElementById('leasesTable');
+                        if (newTable) {{
+                            tbody.innerHTML = newTable.querySelector('tbody').innerHTML;
+                            applySavedSort('leasesTable');
+                            
+                            // Restore individual pause states after refresh
+                            restoreIndividualPauseStates();
+                        }}
+                        
+                        // Update header count
+                        const allOldHeaders = document.querySelectorAll('h2');
+                        const allNewHeaders = newDoc.querySelectorAll('h2');
+                        allOldHeaders.forEach((h, idx) => {{
+                            if (allNewHeaders[idx]) {{
+                                h.textContent = allNewHeaders[idx].textContent;
+                            }}
+                        }});
+                    }});
+            }}
+            
+            function updateStaticDevicesTable(staticDevices) {{
+                const tbody = document.querySelector('#staticDevicesTable tbody');
+                if (!tbody) return;
+                
+                // Update via full page method to keep server-side rendering (SVG icons, services)
+                fetch(window.location.href)
+                    .then(response => response.text())
+                    .then(html => {{
+                        const parser = new DOMParser();
+                        const newDoc = parser.parseFromString(html, 'text/html');
+                        
+                        const newTable = newDoc.getElementById('staticDevicesTable');
+                        if (newTable) {{
+                            tbody.innerHTML = newTable.querySelector('tbody').innerHTML;
+                            applySavedSort('staticDevicesTable');
+                            
+                            // Restore individual pause states after refresh
+                            restoreIndividualPauseStates();
+                        }}
+                        
+                        // Update header count
+                        const allOldHeaders = document.querySelectorAll('h2');
+                        const allNewHeaders = newDoc.querySelectorAll('h2');
+                        allOldHeaders.forEach((h, idx) => {{
+                            if (allNewHeaders[idx]) {{
+                                h.textContent = allNewHeaders[idx].textContent;
+                            }}
+                        }});
+                    }});
+            }}
+            
+            // Settings panel toggle
+            document.addEventListener('DOMContentLoaded', function() {{
+                loadSettings();
+                startRefreshCycle();
+                
+                
+                // Initialize system monitoring gauges (loaded from external file)
+                initGauges(themes, settings);
+                
+                // Initialize scan state from settings
+                const scanStatusEl = document.getElementById('scanStatus');
+                const pauseScanBtn = document.getElementById('pauseScanBtn');
+                scanPaused = !settings.scanEnabled;
+                pausedIPs = new Set(settings.pausedIPs || []);
+                
+                const pauseIcon = getThemedPauseIcon();
+                const playIcon = getThemedPlayIcon();
+                
+                // Update UI based on loaded state
+                if (pauseScanBtn) {{
+                    const iconSpan = pauseScanBtn.querySelector('.pause-icon');
+                    if (iconSpan) {{
+                        iconSpan.innerHTML = scanPaused ? playIcon : pauseIcon;
+                    }}
+                    pauseScanBtn.title = scanPaused ? 'Reprendre le scan' : 'Mettre en pause le scan';
+                }}
+                if (scanStatusEl) {{
+                    scanStatusEl.textContent = scanPaused ? 'Scan réseau en pause' : 'Scan réseau actif';
+                }}
+                
+                // Restore individual states on initial load
+                restoreIndividualPauseStates();
+                
+                // Pause scan button (global)
+                if (pauseScanBtn) {{
+                    pauseScanBtn.addEventListener('click', () => {{
+                        scanPaused = !scanPaused;
+                        settings.scanEnabled = !scanPaused;
+                        saveSettings();
+                        
+                        const iconSpan = pauseScanBtn.querySelector('.pause-icon');
+                        if (iconSpan) {{
+                            iconSpan.innerHTML = scanPaused ? playIcon : pauseIcon;
+                        }}
+                        pauseScanBtn.title = scanPaused ? 'Reprendre le scan' : 'Mettre en pause le scan';
+                        
+                        // Update status text
+                        if (scanStatusEl) {{
+                            scanStatusEl.textContent = scanPaused ? 'Scan réseau en pause' : 'Scan réseau actif';
+                        }}
+                        
+                        // Update all individual buttons while preserving their states
+                        document.querySelectorAll('.pauseIndividualBtn').forEach(btn => {{
+                            const ip = btn.dataset.ip;
+                            const individualPaused = pausedIPs.has(ip);
+                            const btnIconSpan = btn.querySelector('.pause-icon');
+                            
+                            if (scanPaused) {{
+                                // Global pause: disable all buttons, show paused icon
+                                if (btnIconSpan) btnIconSpan.innerHTML = playIcon;
+                                btn.disabled = true;
+                                btn.style.opacity = '0.5';
+                            }} else {{
+                                // Global resumed: restore individual states
+                                if (btnIconSpan) btnIconSpan.innerHTML = individualPaused ? playIcon : pauseIcon;
+                                btn.title = individualPaused ? 'Scan en pause' : 'Mettre en pause le scan';
+                                btn.disabled = false;
+                                btn.style.opacity = '1';
+                            }}
+                        }});
+                        
+                        console.log('Scan global', scanPaused ? 'paused' : 'resumed');
+                    }});
+                }}
+                
+                // Individual pause buttons
+                document.addEventListener('click', (e) => {{
+                    if (e.target.classList.contains('pauseIndividualBtn') || e.target.closest('.pauseIndividualBtn')) {{
+                        if (scanPaused) return; // Don't allow individual control when globally paused
+                        
+                        const btn = e.target.classList.contains('pauseIndividualBtn') ? e.target : e.target.closest('.pauseIndividualBtn');
+                        const ip = btn.dataset.ip;
+                        const isPaused = pausedIPs.has(ip);
+                        const iconSpan = btn.querySelector('.pause-icon');
+                        
+                        if (isPaused) {{
+                            pausedIPs.delete(ip);
+                            if (iconSpan) iconSpan.innerHTML = pauseIcon;
+                            btn.title = 'Pause/Resume scan';
+                            savePausedIPs();
+                            console.log('Scan for', ip, 'resumed');
+                        }} else {{
+                            pausedIPs.add(ip);
+                            if (iconSpan) iconSpan.innerHTML = playIcon;
+                            btn.title = 'Scan en pause';
+                            savePausedIPs();
+                            console.log('Scan for', ip, 'paused');
+                        }}
+                    }}
+                }});
+                
+                // Settings button
+                const settingsBtn = document.getElementById('settingsBtn');
+                const settingsPanel = document.getElementById('settingsPanel');
+                const closeSettings = document.getElementById('closeSettings');
+                
+                if (settingsBtn && settingsPanel) {{
+                    settingsBtn.addEventListener('click', () => {{
+                        settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
+                    }});
+                }}
+                
+                if (closeSettings && settingsPanel) {{
+                    closeSettings.addEventListener('click', () => {{
+                        settingsPanel.style.display = 'none';
+                    }});
+                }}
+                
+                // Refresh interval buttons
+                document.querySelectorAll('.refresh-option').forEach(btn => {{
+                    btn.addEventListener('click', () => {{
+                        settings.refreshInterval = parseInt(btn.dataset.interval);
+                        saveSettings();
+                        updateRefreshIntervalUI();
+                        startRefreshCycle();
+                    }});
+                }});
+                
+                // Theme selection buttons
+                document.querySelectorAll('.theme-option').forEach(btn => {{
+                    btn.addEventListener('click', () => {{
+                        settings.theme = btn.dataset.theme;
+                        saveSettings();
+                        applyTheme(settings.theme);
+                        updateThemeUI();
+                        updatePausePlayIcons();
+                    }});
+                }});
+                
+                // Language selection buttons
+                document.querySelectorAll('.lang-option').forEach(btn => {{
+                    btn.addEventListener('click', () => {{
+                        settings.lang = btn.dataset.lang;
+                        saveSettings();
+                        updateLangUI();
+                        // Reload page to apply new language
+                        window.location.href = `/?lang=${{settings.lang}}`;
+                    }});
+                }});
+                
+                // Table sorting with state persistence
+                const tables = ['poolsTable', 'leasesTable', 'staticDevicesTable'];
+                tables.forEach(tableId => {{
+                    const table = document.getElementById(tableId);
+                    if (!table) return;
+                    
+                    const headers = table.querySelectorAll('th');
+                    headers.forEach((header, index) => {{
+                        header.addEventListener('click', () => {{
+                            const currentSort = settings.sortState[tableId];
+                            let direction = 'asc';
+                            
+                            // Toggle direction if clicking same column
+                            if (currentSort.column === index) {{
+                                direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                            }}
+                            
+                            settings.sortState[tableId] = {{ column: index, direction }};
+                            saveSettings();
+                            sortTable(table, index, direction);
+                        }});
+                    }});
+                    
+                    // Apply saved sort on initial load
+                    applySavedSort(tableId);
+                }});
+            }});
+            
+            function sortTable(table, columnIndex, direction) {{
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                
+                rows.sort((a, b) => {{
+                    const aVal = a.cells[columnIndex].textContent.trim();
+                    const bVal = b.cells[columnIndex].textContent.trim();
+                    
+                    // Try numeric sort first
+                    const aNum = parseFloat(aVal);
+                    const bNum = parseFloat(bVal);
+                    
+                    let comparison = 0;
+                    if (!isNaN(aNum) && !isNaN(bNum)) {{
+                        comparison = aNum - bNum;
+                    }} else {{
+                        // String comparison
+                        comparison = aVal.localeCompare(bVal);
+                    }}
+                    
+                    return direction === 'desc' ? -comparison : comparison;
+                }});
+                
+                rows.forEach(row => tbody.appendChild(row));
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    
+    return html
+
+
+def run_server():
+    """Run the web server"""
+    bind_addr = config['bind_address'] if config['bind_address'] else ''
+    handler = KeaHandler
+    
+    if config['use_ssl']:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(config['cert_file'], config['key_file'])
+        
+        class SSLTCPServer(socketserver.TCPServer):
+            allow_reuse_address = True
+            def server_bind(self):
+                self.socket = context.wrap_socket(self.socket, server_side=True)
+                socketserver.TCPServer.server_bind(self)
+        
+        with SSLTCPServer((bind_addr, config['port']), handler) as httpd:
+            print(f"Serveur HTTPS démarré sur https://localhost:{config['port']}")
+            try:
+                httpd.serve_forever()
+            except KeyboardInterrupt:
+                print("\nServeur arrêté")
+    else:
+        class HTTPTCPServer(socketserver.TCPServer):
+            allow_reuse_address = True
+        
+        with HTTPTCPServer((bind_addr, config['port']), handler) as httpd:
+            print(f"Serveur HTTP démarré sur http://localhost:{config['port']}")
+            try:
+                httpd.serve_forever()
+            except KeyboardInterrupt:
+                print("\nServeur arrêté")
+
+
+if __name__ == "__main__":
+    load_config()
+    print(f"[INFO] Using port: {config['port']}")
+    print(f"[INFO] Using leases file: {config['leases_file']}")
+    print(f"[INFO] Using Kea socket: {config['kea_socket']}")
+    print(f"[INFO] SNMP enabled: {config['enable_snmp']}")
+    print(f"[INFO] mDNS enabled: {config['enable_mdns']}")
+    print(f"[INFO] Network scanner enabled: {config['enable_scanner']}")
+    
+    # Initialize DHCP cache in background (non-blocking)
+    print("[INFO] Starting background DHCP cache initialization...")
+    cache_thread = threading.Thread(target=update_dhcp_cache, daemon=True)
+    cache_thread.start()
+    
+    if config['enable_scanner']:
+        print(f"[INFO] Scanner subnet: {config['scanner_subnet']}")
+        # Start background scanner thread
+        SCAN_THREAD = threading.Thread(target=network_scanner_thread, daemon=True)
+        SCAN_THREAD.start()
+    
+    print("[INFO] Starting server...")
+    run_server()
