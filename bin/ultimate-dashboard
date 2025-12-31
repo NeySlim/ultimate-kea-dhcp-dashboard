@@ -76,6 +76,7 @@ TRANSLATIONS = {
         "no_static_devices": "Aucun dispositif statique trouvé",
         "reservation": "Réservation",
         "static": "Statique",
+        "no_service": "Aucun service",
     },
     "en": {
         "title": "Pinet DHCP Dashboard",
@@ -114,6 +115,7 @@ TRANSLATIONS = {
         "no_static_devices": "No static devices found",
         "reservation": "Reservation",
         "static": "Static",
+        "no_service": "No service",
     },
     "es": {
         "title": "Panel DHCP Pinet",
@@ -152,6 +154,7 @@ TRANSLATIONS = {
         "no_static_devices": "No se encontraron dispositivos estáticos",
         "reservation": "Reserva",
         "static": "Estático",
+        "no_service": "Ningún servicio",
     },
     "de": {
         "title": "Pinet DHCP Dashboard",
@@ -190,6 +193,7 @@ TRANSLATIONS = {
         "no_static_devices": "Keine statischen Geräte gefunden",
         "reservation": "Reservierung",
         "static": "Statisch",
+        "no_service": "Kein Dienst",
     },
     "th": {
         "title": "แดชบอร์ด DHCP Pinet",
@@ -228,6 +232,7 @@ TRANSLATIONS = {
         "no_static_devices": "ไม่พบอุปกรณ์คงที่",
         "reservation": "การจอง",
         "static": "คงที่",
+        "no_service": "ไม่มีบริการ",
     }
 }
 
@@ -1194,7 +1199,7 @@ def generate_html(info, lang="fr"):
                 service_link = format_service_link(ip, port, service)
                 services_html += f"<li>{service_link}</li>"
         
-        services_col = f"<ul style='margin:0;padding-left:20px;'>{services_html}</ul>" if services_html else "<em class='no-service'>Aucun service</em>"
+        services_col = f"<ul style='margin:0;padding-left:20px;'>{services_html}</ul>" if services_html else f"<em class='no-service'>{t['no_service']}</em>"
         
         # Check if custom SVG icon exists
         custom_svg = get_custom_icon_svg(lease.get('hostname', ''))
@@ -1288,7 +1293,7 @@ def generate_html(info, lang="fr"):
                 service_link = format_service_link(ip, port, service)
                 services_html += f"<li>{service_link}</li>"
         
-        services_col = f"<ul style='margin:0;padding-left:20px;'>{services_html}</ul>" if services_html else "<em class='no-service'>Aucun service</em>"
+        services_col = f"<ul style='margin:0;padding-left:20px;'>{services_html}</ul>" if services_html else f"<em class='no-service'>{t['no_service']}</em>"
         
         static_devices_html += f"""
         <tr>
