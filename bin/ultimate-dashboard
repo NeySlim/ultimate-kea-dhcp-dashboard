@@ -1059,6 +1059,24 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
             
             info = get_dhcp_info_cached()
             
+            # Enrich leases with scan results
+            leases = []
+            for lease in info.get('leases', []):
+                ip = lease['ip_address']
+                lease_copy = lease.copy()
+                
+                # Get scan data
+                with CACHE_LOCK:
+                    services = NETWORK_SCAN_RESULTS.get(ip, [])
+                    is_scanning = SCAN_IN_PROGRESS.get(ip, False)
+                    last_scan = LAST_SCAN_TIME.get(ip, 0)
+                
+                lease_copy['services'] = services
+                lease_copy['is_scanning'] = is_scanning
+                lease_copy['last_scan'] = last_scan
+                
+                leases.append(lease_copy)
+            
             # Enrich static devices with scanned data
             static_devices = []
             for device in info.get('static_devices', []):
@@ -1068,6 +1086,9 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 # Get enhanced data from scanner
                 with CACHE_LOCK:
                     enhanced = STATIC_DEVICE_ENHANCED_DATA.get(ip, {})
+                    services = NETWORK_SCAN_RESULTS.get(ip, [])
+                    is_scanning = SCAN_IN_PROGRESS.get(ip, False)
+                    last_scan = LAST_SCAN_TIME.get(ip, 0)
                 
                 # Update with enhanced data if available
                 if enhanced.get('hostname') and device_copy.get('hostname') in ['N/A', None, '']:
@@ -1077,11 +1098,15 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 if enhanced.get('vendor') and device_copy.get('vendor') in ['Unknown', None, '']:
                     device_copy['vendor'] = enhanced['vendor']
                 
+                device_copy['services'] = services
+                device_copy['is_scanning'] = is_scanning
+                device_copy['last_scan'] = last_scan
+                
                 static_devices.append(device_copy)
             
             data = {
                 'pools': info.get('pools', []),
-                'leases': info.get('leases', []),
+                'leases': leases,
                 'static_devices': static_devices,
                 'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
@@ -2546,14 +2571,47 @@ def generate_html(info, lang="fr"):
                     return;
                 }}
                 
+                const currentTime = Math.floor(Date.now() / 1000);
+                
                 let html = '';
                 leases.forEach(lease => {{
                     const stateClass = lease.state === '0' ? 'active' : 'inactive';
                     const expireTime = formatTimestamp(lease.expire);
                     const startTime = formatTimestamp(lease.expire - lease.valid_lft);
+                    const ip = lease.ip_address;
                     
                     // Simple icon (no custom SVG for now)
                     const icon = lease.device_icon || '❓';
+                    
+                    // Build scan status
+                    let scanStatus = '';
+                    if (lease.is_scanning) {{
+                        scanStatus = '<span title="Scan en cours" class="scan-icon">⏳</span>';
+                    }} else if (lease.last_scan > 0) {{
+                        const timeSince = currentTime - lease.last_scan;
+                        const nextIn = Math.max(0, 60 - timeSince);
+                        if (nextIn > 0) {{
+                            scanStatus = '<span title="En attente" class="scan-icon">⏱️</span> <span class="scan-countdown">' + nextIn + 's</span>';
+                        }} else {{
+                            scanStatus = '<span title="En attente" class="scan-icon">🔄</span>';
+                        }}
+                    }} else {{
+                        scanStatus = '<span title="Jamais scanné" class="scan-icon">❌</span>';
+                    }}
+                    
+                    // Build services list
+                    let servicesHtml = '';
+                    if (lease.services && lease.services.length > 0) {{
+                        lease.services.forEach(svc => {{
+                            const protocol = svc.service.toLowerCase();
+                            let link = `${{protocol}}://${{ip}}:${{svc.port}}`;
+                            if (protocol === 'http' || protocol === 'https') {{
+                                link = `${{protocol}}://${{ip}}:${{svc.port}}`;
+                            }}
+                            servicesHtml += `<li><a href="${{link}}" target="_blank" class="service-link">${{svc.service}}:${{svc.port}}</a></li>`;
+                        }});
+                    }}
+                    const servicesCol = servicesHtml ? `<ul style="margin:0;padding-left:20px;">${{servicesHtml}}</ul>` : `<em class="no-service">${{t('no_service')}}</em>`;
                     
                     html += `<tr class="${{stateClass}}">
                         <td style="font-size: 1.3em; text-align: center;" title="${{lease.device_type || 'Unknown'}}">${{icon}}</td>
@@ -2561,8 +2619,8 @@ def generate_html(info, lang="fr"):
                         <td>${{lease.hostname || 'N/A'}}</td>
                         <td>${{lease.hw_address || 'N/A'}}</td>
                         <td>${{lease.vendor || 'Unknown'}}</td>
-                        <td style="font-size: 0.85em;">⏱️</td>
-                        <td style="font-size: 0.9em;"><em class="no-service">${{t('no_service')}}</em></td>
+                        <td style="font-size: 0.85em;">${{scanStatus}}</td>
+                        <td style="font-size: 0.9em;">${{servicesCol}}</td>
                         <td>${{startTime}}</td>
                         <td>${{expireTime}}</td>
                         <td>${{lease.valid_lft}}s</td>
@@ -2571,7 +2629,6 @@ def generate_html(info, lang="fr"):
                 
                 tbody.innerHTML = html;
                 applySavedSort('leasesTable');
-                restoreIndividualPauseStates();
             }}
             
             function updateStaticDevicesTableFromData(devices) {{
@@ -2583,10 +2640,43 @@ def generate_html(info, lang="fr"):
                     return;
                 }}
                 
+                const currentTime = Math.floor(Date.now() / 1000);
+                
                 let html = '';
                 devices.forEach(device => {{
                     const typeBadge = `<span class="badge badge-${{device.type}}">${{t(device.type) || device.type}}</span>`;
                     const icon = device.device_icon || '🔧';
+                    const ip = device.ip_address;
+                    
+                    // Build scan status
+                    let scanStatus = '';
+                    if (device.is_scanning) {{
+                        scanStatus = '<span title="Scan en cours" class="scan-icon">⏳</span>';
+                    }} else if (device.last_scan > 0) {{
+                        const timeSince = currentTime - device.last_scan;
+                        const nextIn = Math.max(0, 60 - timeSince);
+                        if (nextIn > 0) {{
+                            scanStatus = '<span title="En attente" class="scan-icon">⏱️</span> <span class="scan-countdown">' + nextIn + 's</span>';
+                        }} else {{
+                            scanStatus = '<span title="En attente" class="scan-icon">🔄</span>';
+                        }}
+                    }} else {{
+                        scanStatus = '<span title="Jamais scanné" class="scan-icon">❌</span>';
+                    }}
+                    
+                    // Build services list
+                    let servicesHtml = '';
+                    if (device.services && device.services.length > 0) {{
+                        device.services.forEach(svc => {{
+                            const protocol = svc.service.toLowerCase();
+                            let link = `${{protocol}}://${{ip}}:${{svc.port}}`;
+                            if (protocol === 'http' || protocol === 'https') {{
+                                link = `${{protocol}}://${{ip}}:${{svc.port}}`;
+                            }}
+                            servicesHtml += `<li><a href="${{link}}" target="_blank" class="service-link">${{svc.service}}:${{svc.port}}</a></li>`;
+                        }});
+                    }}
+                    const servicesCol = servicesHtml ? `<ul style="margin:0;padding-left:20px;">${{servicesHtml}}</ul>` : `<em class="no-service">${{t('no_service')}}</em>`;
                     
                     html += `<tr>
                         <td style="font-size: 1.3em; text-align: center;" title="${{device.device_type || 'Unknown'}}">${{icon}}</td>
@@ -2595,15 +2685,14 @@ def generate_html(info, lang="fr"):
                         <td>${{device.hostname || 'N/A'}}</td>
                         <td>${{device.hw_address || 'N/A'}}</td>
                         <td>${{device.vendor || 'Unknown'}}</td>
-                        <td style="font-size: 0.85em;">⏱️</td>
-                        <td style="font-size: 0.9em;"><em class="no-service">${{t('no_service')}}</em></td>
+                        <td style="font-size: 0.85em;">${{scanStatus}}</td>
+                        <td style="font-size: 0.9em;">${{servicesCol}}</td>
                         <td>${{device.subnet || 'N/A'}}</td>
                     </tr>`;
                 }});
                 
                 tbody.innerHTML = html;
                 applySavedSort('staticDevicesTable');
-                restoreIndividualPauseStates();
             }}
             
             
