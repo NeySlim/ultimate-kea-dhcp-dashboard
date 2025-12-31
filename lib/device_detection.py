@@ -31,17 +31,22 @@ def format_service_link(ip, port_service, service_name):
     """Format service with icon and clickable link if applicable"""
     port = port_service.split('/')[0]
     
+    # Get icon for known services
     if port in SERVICE_ICONS:
         icon, label = SERVICE_ICONS[port]
     else:
-        icon, label = '⚙️', service_name[:15]
+        icon = '⚙️'
     
+    # Truncate service name if too long
+    display_name = service_name if len(service_name) <= 40 else service_name[:37] + '...'
+    
+    # Create clickable link for web services
     if port in ['80', '443', '8080', '8443', '3000', '5000', '8000', '8888', '9000', '9090']:
         protocol = 'https' if port in ['443', '8443'] else 'http'
         url = f"{protocol}://{ip}:{port}"
-        return f"{icon} <a href='{url}' target='_blank' class='service-link'>{port}</a>"
+        return f'<li>{icon} <a href="{url}" target="_blank" class="service-link" title="{service_name}">{display_name}</a></li>'
     else:
-        return f"{icon} {port}"
+        return f'<li>{icon} <span title="{service_name}">{display_name}</span></li>'
 
 
 def get_device_type(hostname, vendor, mac, device_info=None):
