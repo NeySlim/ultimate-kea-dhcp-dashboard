@@ -1,175 +1,195 @@
 # Ultimate Kea DHCP Dashboard
 
-A beautiful, real-time monitoring dashboard for Kea DHCP servers with advanced network scanning and system monitoring capabilities.
+A modern, real-time web dashboard for monitoring ISC Kea DHCP server leases, pools, and network devices with advanced scanning capabilities and system metrics visualization.
 
-![Dashboard Preview](https://img.shields.io/badge/Status-Production-green)
-![License](https://img.shields.io/badge/License-MIT-blue)
-![Python](https://img.shields.io/badge/Python-3.8+-blue)
+## Features
 
-## ✨ Features
+### DHCP Monitoring
+- Real-time DHCP lease tracking
+- Pool utilization visualization
+- Reserved IP management
+- MAC address vendor identification
+- Automatic hostname resolution
 
-### 🎨 Beautiful Themes
-- **5 stunning themes**: Blossom (default), Dark Mode, Neon Pulse, Ocean Breeze, and Netdata-inspired
-- Fully themed UI components including gauges, buttons, and tables
-- Smooth transitions and modern design
+### Network Scanning
+- Active device discovery within and outside DHCP pools
+- Multi-threaded network scanning for fast results
+- Service detection (HTTP/HTTPS)
+- Device type identification
+- Individual and global scan control
 
-### 📊 Real-Time Monitoring
-- **DHCP Lease Tracking**: Monitor all active DHCP leases with hostname resolution
-- **Network Scanning**: Automatic scanning of DHCP pool and non-DHCP subnets
-- **System Metrics**: CPU, RAM, Network, and Disk usage with beautiful gauge displays
-- **Live Updates**: Auto-refresh with configurable intervals
+### System Metrics
+- Real-time CPU, RAM, Network, and Disk usage
+- Responsive gauge visualization
+- Theme-aware color schemes
+- Per-core CPU monitoring
 
-### 🔧 Advanced Features
-- **Individual & Global Scan Control**: Pause/resume scanning globally or per-host
-- **Multiple Data Sources**: ARP, reverse DNS, SNMP, and ping for comprehensive host information
-- **MAC Address Vendor Lookup**: Identify device manufacturers
-- **Hostname Resolution**: Multiple methods for accurate hostname detection
-- **Persistent Settings**: All preferences saved automatically
+### Modern UI
+- Multiple professional themes (Blossom, Sunset, Ocean, Forest, Night)
+- Responsive design
+- Real-time auto-refresh
+- Pause/resume functionality
+- Clean, intuitive interface
 
-### 🖥️ System Requirements
-- Debian-based Linux (Debian, Ubuntu, etc.)
-- Python 3.8 or higher
-- Kea DHCP Server with MySQL backend
-- Root or sudo access for installation
+## Requirements
 
-## 🚀 Quick Install
+- Python 3.8+
+- ISC Kea DHCP Server
+- Linux system (Debian/Ubuntu recommended)
+- Root or sudo access for network scanning
+
+## Quick Installation
 
 ```bash
 # Download and run the installer
-curl -fsSL https://github.com/YOUR_USERNAME/ultimate-kea-dashboard/releases/latest/download/install.sh | sudo bash
+curl -sL https://github.com/NeySlim/ultimate-kea-dashboard/releases/latest/download/install.sh | sudo bash
 ```
 
-Or manual installation:
+## Manual Installation
 
+1. Clone the repository:
 ```bash
-# Download the installer
-wget https://github.com/YOUR_USERNAME/ultimate-kea-dashboard/releases/latest/download/install.sh
+git clone https://github.com/NeySlim/ultimate-kea-dashboard.git
+cd ultimate-kea-dashboard
+```
 
-# Make it executable
-chmod +x install.sh
+2. Install dependencies:
+```bash
+sudo apt-get update
+sudo apt-get install -y python3 python3-pip nmap arping
+```
 
-# Run the installer
+3. Configure the dashboard:
+```bash
+sudo cp etc/ultimate-dashboard.conf.example etc/ultimate-dashboard.conf
+sudo nano etc/ultimate-dashboard.conf
+```
+
+4. Run the dashboard:
+```bash
+sudo python3 bin/ultimate-dashboard
+```
+
+Or install as a systemd service:
+```bash
 sudo ./install.sh
 ```
 
-## 📦 What's Included
+## Configuration
 
-- Interactive installation wizard with theme-based UI
-- Automatic dependency installation
-- Service configuration and auto-start
-- Configuration file generation
-- Complete uninstallation support
+Edit `/etc/ultimate-dashboard/ultimate-dashboard.conf`:
 
-## 🔧 Configuration
+```ini
+[DEFAULT]
+# Server settings
+port = 8089
+ssl_enabled = true
 
-During installation, you'll be prompted for:
+# Kea paths
+kea_config = /etc/kea/kea-dhcp4.conf
+kea_leases = /var/lib/kea/kea-leases4.csv
 
-- **Kea Database Settings**: Host, port, database name, credentials
-- **Network Configuration**: DHCP pool range, subnet, reserved IPs
-- **Dashboard Settings**: Port, refresh interval, auto-scan on startup
-- **SNMP Community**: For enhanced device information (optional)
+# Network settings
+subnet = 192.168.1.0/24
+dhcp_range_start = 192.168.1.100
+dhcp_range_end = 192.168.1.200
 
-All settings can be reconfigured later by editing `/opt/ultimate-dashboard/etc/config.ini`
-
-## 🎯 Usage
-
-After installation, the dashboard will be available at:
-
-```
-http://YOUR_SERVER_IP:8089
+# Scanning
+scan_threads = 50
+scan_timeout = 0.5
 ```
 
-### Service Management
+## Usage
 
+Access the dashboard at:
+- HTTPS: `https://your-server-ip:8089`
+- HTTP: `http://your-server-ip:8089` (if SSL disabled)
+
+### Controls
+
+- **Global Scan Control**: Pause/resume all network scans from the header
+- **Individual Scan Control**: Pause/resume scanning for specific devices
+- **Theme Selector**: Choose from 5 professional themes
+- **Auto-refresh**: Configurable refresh interval (default: 30s)
+
+## Architecture
+
+```
+ultimate-kea-dashboard/
+├── bin/
+│   └── ultimate-dashboard          # Main application
+├── lib/
+│   ├── themes.py                   # Theme definitions
+│   ├── stats.py                    # System metrics
+│   ├── network_scanner.py          # Network scanning logic
+│   ├── device_detection.py         # Device type detection
+│   └── mac_vendor.py               # MAC vendor lookup
+├── static/
+│   └── js/
+│       └── gauges.js               # Gauge visualization
+├── data/
+│   └── oui.json                    # IEEE OUI database
+└── etc/
+    └── ultimate-dashboard.conf.example
+```
+
+## Security Considerations
+
+- SSL/TLS encryption enabled by default
+- Configuration file should be readable only by root
+- No default passwords or credentials
+- Network scanning requires appropriate permissions
+
+## Performance
+
+- Multi-threaded scanning (configurable thread pool)
+- Efficient caching mechanisms
+- Minimal resource footprint
+- Optimized for networks with 100+ devices
+
+## Troubleshooting
+
+### Dashboard not starting
 ```bash
-# Check status
-sudo systemctl status ultimate-dashboard
-
-# Start/Stop/Restart
-sudo systemctl start ultimate-dashboard
-sudo systemctl stop ultimate-dashboard
-sudo systemctl restart ultimate-dashboard
-
-# View logs
+# Check logs
 sudo journalctl -u ultimate-dashboard -f
+
+# Verify configuration
+sudo python3 -c "import configparser; c=configparser.ConfigParser(); c.read('/etc/ultimate-dashboard/ultimate-dashboard.conf'); print('Config OK')"
 ```
 
-### Uninstall
-
+### Scans not working
 ```bash
-sudo /opt/ultimate-dashboard/bin/uninstall.sh
+# Ensure required tools are installed
+which nmap arping
+
+# Check permissions
+sudo -v
 ```
 
-## 🎨 Themes
+### Empty MAC addresses
+- Ensure ARP table is populated (ping devices first)
+- Run dashboard with sudo/root privileges
+- Check network interface permissions
 
-### Blossom (Default)
-Warm, pink-themed interface with soft gradients
+## Contributing
 
-### Dark Mode
-Sleek dark theme for reduced eye strain
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-### Neon Pulse
-Vibrant purple and cyan neon aesthetics
+## License
 
-### Ocean Breeze
-Cool blue tones inspired by the ocean
+MIT License - see [LICENSE](LICENSE) for details.
 
-### Netdata
-Faithful recreation of Netdata's monitoring interface
+## Changelog
 
-## 🛠️ Technical Details
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-### Architecture
-- **Backend**: Python 3 with Flask web framework
-- **Frontend**: Vanilla JavaScript with real-time updates
-- **Database**: MySQL for Kea DHCP lease data
-- **WebSockets**: Real-time communication for live metrics
+## Author
 
-### Network Scanning
-- Multi-threaded scanning for performance
-- ARP table integration
-- Reverse DNS lookups
-- SNMP device queries
-- ICMP ping checks
+Created and maintained by NeySlim.
 
-### System Monitoring
-- Per-core CPU usage tracking
-- Real-time memory statistics
-- Network I/O monitoring (in/out)
-- Disk usage with GB metrics
+## Acknowledgments
 
-## 📄 License
-
-MIT License - Feel free to use, modify, and distribute
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit pull requests or open issues.
-
-## 📧 Support
-
-For issues and questions:
-- GitHub Issues: [Report a bug](https://github.com/YOUR_USERNAME/ultimate-kea-dashboard/issues)
-- Discussions: [Ask questions](https://github.com/YOUR_USERNAME/ultimate-kea-dashboard/discussions)
-
-## 🙏 Acknowledgments
-
-- Inspired by Netdata's beautiful monitoring interface
-- Built for the Kea DHCP community
-- Theme designs influenced by modern UI trends
-
-## 📸 Screenshots
-
-### Main Dashboard
-![Main Dashboard](screenshots/dashboard-main.png)
-
-### System Metrics
-![System Metrics](screenshots/metrics.png)
-
-### Theme Selection
-![Themes](screenshots/themes.png)
-
----
-
-**Made with ❤️ for network administrators**
-# ultimate-kea-dhcp-dashboard
+- ISC Kea DHCP Server team
+- IEEE for OUI database
+- Netdata for UI inspiration

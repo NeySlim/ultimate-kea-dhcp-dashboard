@@ -1,59 +1,63 @@
-# Contributing to Ultimate Kea Dashboard
+# Contributing to Ultimate DHCP Dashboard
 
-Thank you for considering contributing to Ultimate Kea Dashboard! 
+## Code Organization
 
-## How to Contribute
+The project follows a modular architecture:
 
-### Reporting Bugs
-- Use GitHub Issues
-- Include system information (OS, Python version, Kea version)
-- Provide clear steps to reproduce
-- Include relevant logs
-
-### Suggesting Features
-- Open a GitHub Issue with the "enhancement" label
-- Describe the feature and its use case
-- Explain why it would be valuable
-
-### Pull Requests
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Make your changes
-4. Test thoroughly
-5. Commit with clear messages (`git commit -m 'Add AmazingFeature'`)
-6. Push to your fork (`git push origin feature/AmazingFeature`)
-7. Open a Pull Request
-
-### Code Style
-- Follow PEP 8 for Python code
-- Use meaningful variable names
-- Comment complex logic
-- Keep functions focused and small
-
-### Testing
-- Test on a clean Debian/Ubuntu system
-- Verify all themes work correctly
-- Check both DHCP tables function properly
-- Ensure scanning works as expected
+- `bin/ultimate-dashboard` - Main application entry point and HTTP server
+- `lib/network_scanner.py` - Network scanning and service discovery
+- `lib/device_detection.py` - Device type classification logic
+- `lib/mac_vendor.py` - MAC address vendor lookup utilities
+- `lib/stats.py` - System statistics collection
+- `lib/themes.py` - UI theme definitions
+- `static/js/` - Client-side JavaScript components
+- `etc/` - Configuration files
 
 ## Development Setup
 
-```bash
-# Clone your fork
-git clone https://github.com/YOUR_USERNAME/ultimate-kea-dashboard.git
+1. Clone the repository
+2. Copy `etc/ultimate-dashboard.conf.example` to `etc/ultimate-dashboard.conf`
+3. Configure your environment-specific settings
+4. Install dependencies: `pip3 install psutil`
 
-# Install in development mode
-cd ultimate-kea-dashboard
-sudo ./installer/install.sh
+## Code Style
 
-# Make changes
-# Test changes
-sudo systemctl restart ultimate-dashboard
+- Follow PEP 8 guidelines for Python code
+- Use descriptive function and variable names
+- Add docstrings to all functions
+- Keep functions focused and modular
+- Avoid hardcoded credentials or paths
 
-# View logs
-sudo journalctl -u ultimate-dashboard -f
-```
+## Security Best Practices
 
-## Questions?
+- Never commit sensitive data (passwords, tokens, certificates)
+- Use placeholder values in example configurations
+- Sanitize user inputs before processing
+- Follow principle of least privilege for file permissions
 
-Feel free to open a GitHub Discussion for questions!
+## Testing Changes
+
+Before submitting changes:
+
+1. Test syntax: `python3 -m py_compile bin/ultimate-dashboard`
+2. Test all modules: `python3 -m py_compile lib/*.py`
+3. Verify configuration loading works correctly
+4. Test dashboard accessibility and functionality
+5. Check for memory leaks in long-running processes
+
+## Pull Request Guidelines
+
+- Provide clear description of changes
+- Reference any related issues
+- Ensure code passes syntax checks
+- Update documentation if needed
+- Test on target environment before submitting
+
+## Reporting Issues
+
+When reporting bugs, include:
+- Operating system and Python version
+- ISC Kea DHCP version
+- Complete error messages and stack traces
+- Steps to reproduce the issue
+- Configuration details (sanitized)

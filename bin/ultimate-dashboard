@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Pinet DHCP Dashboard - Kea DHCPv4 leases and pools viewer
-Configuration file: /etc/pinet-dhcp-dashboard/pinet-dhcp-dashboard.conf
+Ultimate DHCP Dashboard - ISC Kea DHCPv4 leases and pools monitoring
+Web-based dashboard with network scanning and real-time system metrics
 """
 
 import json
@@ -10,7 +10,6 @@ import socketserver
 import ssl
 import csv
 import socket
-import urllib.request
 import configparser
 import sys
 import subprocess
@@ -24,10 +23,19 @@ from html import escape
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Add lib directory to path
-sys.path.insert(0, '/opt/ultimate-dashboard/lib')
+# Add lib directory to path (relative to script location)
+SCRIPT_DIR = Path(__file__).parent.parent.absolute()
+sys.path.insert(0, str(SCRIPT_DIR / 'lib'))
 from themes import THEMES, get_theme_css
 from stats import get_system_stats
+from network_scanner import (
+    scan_network_host, 
+    scan_static_device_enhanced,
+    get_snmp_sysDescr,
+    ping_host
+)
+from device_detection import get_device_type, format_service_link, SERVICE_ICONS
+from mac_vendor import get_mac_vendor
 
 # Translations
 TRANSLATIONS = {
@@ -225,19 +233,17 @@ TRANSLATIONS = {
 
 # Default configuration
 CONFIG_PATHS = [
-    '/opt/ultimate-dashboard/etc/ultimate-dashboard.conf',
+    str(SCRIPT_DIR / 'etc' / 'ultimate-dashboard.conf'),
     '/etc/ultimate-dashboard/ultimate-dashboard.conf',
     './ultimate-dashboard.conf',
-    # Legacy paths (backward compatibility)
-    '/etc/pinet-dhcp-dashboard/pinet-dhcp-dashboard.conf',
-    '/opt/pinet-dhcp-dashboard/pinet-dhcp-dashboard.conf',
+    '/opt/ultimate-dashboard/etc/ultimate-dashboard.conf',
 ]
 
 DEFAULT_CONFIG = {
     'port': 8089,
     'use_ssl': False,
-    'cert_file': '/root/pinet.crt',
-    'key_file': '/root/pinet.key',
+    'cert_file': '/path/to/your/cert.crt',
+    'key_file': '/path/to/your/key.key',
     'leases_file': '/var/lib/kea/kea-leases4.csv',
     'kea_socket': '/run/kea/kea4-ctrl-socket',
     'bind_address': '',
@@ -245,7 +251,7 @@ DEFAULT_CONFIG = {
     'mac_vendor_timeout': 2,
     'reverse_dns_timeout': 2,
     'enable_snmp': True,
-    'snmp_community': 'home',
+    'snmp_community': 'public',
     'snmp_timeout': 1,
     'enable_mdns': True,
     'mdns_timeout': 1,
@@ -256,41 +262,13 @@ DEFAULT_CONFIG = {
 
 # Global config
 config = DEFAULT_CONFIG.copy()
-MAC_VENDOR_CACHE = {}
-MAC_VENDOR_DB = None  # Will load OUI database on first use
 DEVICE_INFO_CACHE = {}
 NETWORK_SCAN_RESULTS = {}
-STATIC_DEVICE_ENHANCED_DATA = {}  # Enhanced data for static devices (hostname, mac, vendor, etc.)
-LAST_SCAN_TIME = {}  # Track last scan time per IP
-SCAN_IN_PROGRESS = {}  # Track IPs currently being scanned
+STATIC_DEVICE_ENHANCED_DATA = {}
+LAST_SCAN_TIME = {}
+SCAN_IN_PROGRESS = {}
 CACHE_LOCK = threading.Lock()
 SCAN_THREAD = None
-
-# Service icons mapping
-SERVICE_ICONS = {
-    '22': ('🔑', 'SSH'),
-    '25': ('✉️', 'SMTP'),
-    '53': ('🔍', 'DNS'),
-    '80': ('🌐', 'HTTP'),
-    '110': ('📧', 'POP3'),
-    '143': ('📧', 'IMAP'),
-    '161': ('📊', 'SNMP'),
-    '389': ('👤', 'LDAP'),
-    '443': ('🔒', 'HTTPS'),
-    '631': ('🖨️', 'CUPS'),
-    '3000': ('📊', 'Web'),
-    '3306': ('🗄️', 'MySQL'),
-    '5000': ('📊', 'Flask'),
-    '5432': ('🗄️', 'PostgreSQL'),
-    '5900': ('👁️', 'VNC'),
-    '6379': ('⚡', 'Redis'),
-    '8000': ('🌐', 'HTTP'),
-    '8080': ('🌐', 'HTTP-Alt'),
-    '8443': ('🔒', 'HTTPS-Alt'),
-    '8888': ('🌐', 'HTTP'),
-    '9000': ('🎯', 'Admin'),
-    '9090': ('📊', 'Admin'),
-}
 
 
 def load_config():
@@ -332,114 +310,6 @@ def resolve_hostname(ip):
         result = socket.gethostbyaddr(ip)
         if result and result[0]:
             return result[0]
-    except:
-        pass
-    return None
-
-
-def format_service_link(ip, port_service, service_name):
-    """Format service with icon and clickable link if applicable"""
-    port = port_service.split('/')[0]
-    
-    # Get icon and label
-    if port in SERVICE_ICONS:
-        icon, label = SERVICE_ICONS[port]
-    else:
-        icon, label = '⚙️', service_name[:15]
-    
-    # Create clickable link for web services
-    if port in ['80', '443', '8080', '8443', '3000', '5000', '8000', '8888', '9000', '9090']:
-        protocol = 'https' if port in ['443', '8443'] else 'http'
-        url = f"{protocol}://{ip}:{port}"
-        return f"{icon} <a href='{url}' target='_blank' class='service-link'>{port}</a>"
-    else:
-        return f"{icon} {port}"
-
-
-def load_mac_vendor_db():
-    """Load MAC vendor database from local OUI JSON file"""
-    global MAC_VENDOR_DB
-    
-    if MAC_VENDOR_DB is not None:
-        return MAC_VENDOR_DB
-    
-    oui_file = '/opt/ultimate-dashboard/data/oui.json'
-    
-    try:
-        if Path(oui_file).exists():
-            with open(oui_file, 'r') as f:
-                MAC_VENDOR_DB = json.load(f)
-            print(f"[INFO] Loaded {len(MAC_VENDOR_DB)} MAC vendors from local database")
-        else:
-            print(f"[WARN] OUI database not found at {oui_file}")
-            MAC_VENDOR_DB = {}
-    except Exception as e:
-        print(f"[ERROR] Failed to load OUI database: {e}")
-        MAC_VENDOR_DB = {}
-    
-    return MAC_VENDOR_DB
-
-
-def get_mac_vendor(mac):
-    """Get MAC vendor from local OUI database with API fallback"""
-    if not config['enable_mac_vendor'] or not mac:
-        return "N/A"
-    
-    # Normalize MAC address
-    mac_clean = mac.upper().replace('-', ':')
-    mac_prefix = ':'.join(mac_clean.split(':')[:3])
-    
-    # Check cache first
-    if mac_prefix in MAC_VENDOR_CACHE:
-        return MAC_VENDOR_CACHE[mac_prefix]
-    
-    # Try local database
-    db = load_mac_vendor_db()
-    if mac_prefix in db:
-        vendor = db[mac_prefix]
-        # Simplify long vendor names
-        if len(vendor) > 30:
-            vendor = vendor.split(',')[0].split('(')[0].strip()
-        MAC_VENDOR_CACHE[mac_prefix] = vendor
-        return vendor
-    
-    # Fallback to API (with rate limiting protection)
-    try:
-        url = f"https://api.macvendors.com/{mac_prefix}"
-        response = urllib.request.urlopen(url, timeout=config['mac_vendor_timeout'])
-        vendor = response.read().decode().strip()
-        if len(vendor) > 30:
-            vendor = vendor.split(',')[0].split('(')[0].strip()
-        MAC_VENDOR_CACHE[mac_prefix] = vendor
-        time.sleep(0.5)  # Rate limiting
-        return vendor
-    except:
-        MAC_VENDOR_CACHE[mac_prefix] = "Unknown"
-        return "Unknown"
-
-
-def get_snmp_sysDescr(ip, timeout=None):
-    """Get SNMP sysDescr from device"""
-    if not config['enable_snmp']:
-        return None
-    
-    if timeout is None:
-        timeout = config['snmp_timeout']
-    
-    try:
-        community = config['snmp_community']
-        result = subprocess.run(
-            ["snmpget", "-v", "2c", "-c", community, "-t", str(timeout), ip, "1.3.6.1.2.1.1.1.0"],
-            capture_output=True,
-            text=True,
-            timeout=timeout+1
-        )
-        if result.returncode == 0:
-            lines = result.stdout.strip().split('\n')
-            if lines:
-                for line in lines:
-                    if "STRING:" in line:
-                        return line.split("STRING:")[-1].strip().strip('"')
     except:
         pass
     return None
@@ -603,325 +473,6 @@ def get_custom_icon_svg(hostname):
     return None
 
 
-def get_device_type(hostname, vendor, mac, ip=None):
-    """Detect device type from all available sources"""
-    h = hostname.lower() if hostname and hostname != "N/A" else ""
-    v = vendor.lower() if vendor else ""
-    m = mac.lower() if mac else ""
-    
-    combined = f"{h} {v} {m}"
-    
-    # Get async info (SNMP + mDNS)
-    if ip and ip != "N/A":
-        device_info = get_device_info_async(ip, hostname, vendor, mac)
-        if device_info.get("snmp"):
-            combined += f" {device_info['snmp'].lower()}"
-        if device_info.get("mdns"):
-            combined += f" {device_info['mdns'].lower()}"
-    
-    # === CUSTOM EXCEPTIONS (priority!) ===
-    # Marvin - PC Gaming Maître
-    if "marvin" in h:
-        return ("🎮👑", "PC Gaming Maître")
-    
-    # Shepard - PC Gaming Apprenti  
-    if "shepard" in h:
-        return ("🎮🔰", "PC Gaming Apprenti")
-    # === END CUSTOM EXCEPTIONS ===
-    
-    # Cameras (check before smartphones!)
-    if any(x in combined for x in ["dafang", "camera", "webcam", "hikvision", "dahua", "reolink", "wyze", "ring", "doorbell", "video", "ipcam", "cam-"]):
-        return ("📷", "Camera")
-    
-    # Samsung devices - specific detection by hostname
-    if "samsung" in v or "s24" in h or "galaxy" in h or "tab-a" in h or "sm-" in h:
-        if any(x in h for x in ["tab", "tablet"]):
-            return ("📱", "Samsung Tablet")
-        elif any(x in h for x in ["s24", "s23", "s22", "s21", "s20", "galaxy", "phone"]):
-            return ("📱", "Samsung Phone")
-        elif "tv" in h:
-            return ("📺", "Samsung TV")
-        else:
-            return ("📱", "Samsung")
-    
-    # Apple devices - check hostname first
-    if any(x in h for x in ["macbook", "imac", "mac-", "iphone", "ipad"]):
-        if "macbook" in h or "imac" in h or "mac" in h:
-            return ("🍎", "Apple Mac")
-        elif "iphone" in h:
-            return ("🍎", "iPhone")
-        elif "ipad" in h:
-            return ("🍎", "iPad")
-        else:
-            return ("🍎", "Apple")
-    
-    # Apple by vendor
-    if any(x in v for x in ["apple"]):
-        return ("🍎", "Apple")
-    
-    # Amazon devices (Echo, Fire TV, etc)
-    if "amazon" in v:
-        if any(x in combined for x in ["echo", "alexa", "dot"]):
-            return ("🔊", "Amazon Echo")
-        elif any(x in combined for x in ["fire", "firetv", "stick"]):
-            return ("📺", "Fire TV")
-        else:
-            return ("📦", "Amazon Device")
-    
-    # TV & Media devices (check hostname patterns)
-    if any(x in h for x in ["tv", "tele", "television"]):
-        if "philips" in combined or "phillips" in combined:
-            return ("📺", "Philips TV")
-        elif "samsung" in combined:
-            return ("📺", "Samsung TV")
-        elif "lg" in combined:
-            return ("📺", "LG TV")
-        else:
-            return ("📺", "TV")
-    
-    # TV by keywords
-    if any(x in combined for x in ["samsung tv", "lg tv", "sony tv", "philips", "panasonic", "toshiba", "vizio", "roku", "firestick", "appletv", "android tv", "smarttv", "hisense", "sharp"]):
-        return ("📺", "TV")
-    
-    # Smartphones/Android - check hostname for phone patterns
-    if any(x in h for x in ["phone", "mobile", "pixel", "oneplus", "redmi"]):
-        return ("📱", "Smartphone")
-    
-    # Smartphones by vendor
-    if any(x in combined for x in ["android", "pixel", "htc", "motorola", "oneplus", "redmi", "realme", "oppo", "vivo"]):
-        return ("📱", "Smartphone")
-    
-    # Tablets - check hostname
-    if any(x in h for x in ["tablet", "tab-", "ipad"]):
-        return ("📱", "Tablet")
-    
-    # Xiaomi devices
-    if "xiaomi" in v:
-        if any(x in h for x in ["camera", "cam", "dafang"]):
-            return ("📷", "Xiaomi Camera")
-        elif any(x in h for x in ["phone", "redmi", "mi-", "poco"]):
-            return ("📱", "Xiaomi Phone")
-        elif "tv" in h:
-            return ("📺", "Xiaomi TV")
-        else:
-            return ("🔌", "Xiaomi Device")
-    
-    # Routers & Network
-    if any(x in combined for x in ["router", "gateway", "access point", "ap-", "ap_", "wifi", "ubiquiti", "tp-link", "netgear", "cisco", "asus", "linksys", "mikrotik", "fortinet", "d-link", "meraki", "ieee registration authority"]):
-        return ("📡", "Router/AP")
-    
-    # Printers
-    if any(x in combined for x in ["print", "brother", "hp", "xerox", "canon", "epson", "ricoh", "konica", "minolta"]):
-        return ("🖨️", "Printer")
-    
-    # Smart Home & IoT
-    if any(x in combined for x in ["esp", "esp32", "esp8266", "esp8285", "espressif", "arduino", "home", "smart", "homekit", "zigbee", "zwave", "mqtt", "sonoff", "shelly", "tasmota", "tuya"]):
-        return ("🔌", "Smart Home")
-    
-    # Laptops & Desktops
-    if any(x in combined for x in ["laptop", "desktop", "pc", "computer", "dell", "hp", "lenovo", "asus", "acer", "msi", "windows", "linux", "workstation"]):
-        return ("💻", "Computer")
-    
-    # Raspberry Pi & SBC
-    if any(x in combined for x in ["raspi", "raspberry", "rpi", "pi", "jetson", "odroid", "beaglebone"]):
-        return ("🍓", "Raspberry Pi")
-    
-    # Servers & NAS
-    if any(x in combined for x in ["server", "nas", "synology", "qnap", "pfsense", "proxmox", "homelab", "unraid"]):
-        return ("⚙️", "Server/NAS")
-    
-    # Smart TVs & Media Players
-    if any(x in combined for x in ["chromecast", "nvidia shield", "kodi", "plex", "media"]):
-        return ("📺", "Media Player")
-    
-    # Gaming
-    if any(x in combined for x in ["gaming", "xbox", "playstation", "ps4", "ps5", "nintendo", "steam", "switch"]):
-        return ("🎮", "Gaming")
-    
-    # Audio & Speakers
-    if any(x in combined for x in ["speaker", "audio", "sonos", "bose", "harman", "denon", "yamaha", "amplifier"]):
-        return ("🔊", "Audio")
-    
-    # Smartwatch & Wearables
-    if any(x in combined for x in ["watch", "fitbit", "garmin", "smartband", "wearable"]):
-        return ("⌚", "Wearable")
-    
-    # Printers & Scanners
-    if any(x in combined for x in ["scanner", "mfp", "multifunction"]):
-        return ("📄", "Scanner")
-    
-    # Network Storage
-    if any(x in combined for x in ["storage", "backup", "hdd", "ssd"]):
-        return ("💾", "Storage")
-    
-    # Hui Zhou Gaoshengda = Chinese tech company (often smart devices/TV boxes)
-    if "hui zhou gaoshengda" in v or "gaoshengda" in v:
-        if "tv" in h or "tele" in h:
-            return ("📺", "TV Box")
-        else:
-            return ("📺", "Media Box")
-    
-    # Default
-    return ("❓", "Unknown")
-
-
-def get_hostname_from_snmp(ip, community="home"):
-    """Try to get hostname via SNMP"""
-    try:
-        result = subprocess.run(
-            ["snmpget", "-v2c", "-c", community, "-Oqv", "-t", "2", ip, "SNMPv2-MIB::sysName.0"],
-            capture_output=True,
-            text=True,
-            timeout=3
-        )
-        if result.returncode == 0:
-            hostname = result.stdout.strip().strip('"')
-            if hostname and hostname != "No Such Object available on this agent at this OID":
-                return hostname
-    except Exception:
-        pass
-    return None
-
-
-def get_mac_from_arp(ip):
-    """Try to get MAC address from ARP cache"""
-    try:
-        # Try ip neigh first (more reliable)
-        result = subprocess.run(
-            ["ip", "neigh", "show", ip],
-            capture_output=True,
-            text=True,
-            timeout=2
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            # Format: 192.168.1.1 dev eth0 lladdr aa:bb:cc:dd:ee:ff REACHABLE
-            parts = result.stdout.split()
-            for i, part in enumerate(parts):
-                if part == "lladdr" and i + 1 < len(parts):
-                    mac = parts[i + 1]
-                    if ':' in mac:
-                        return mac.upper()
-        
-        # Fallback to arp command
-        result = subprocess.run(
-            ["arp", "-n", ip],
-            capture_output=True,
-            text=True,
-            timeout=2
-        )
-        if result.returncode == 0:
-            lines = result.stdout.split('\n')
-            for line in lines:
-                if ip in line:
-                    parts = line.split()
-                    if len(parts) >= 3:
-                        mac = parts[2]
-                        if ':' in mac and mac != "(incomplete)":
-                            return mac.upper()
-    except Exception:
-        pass
-    return None
-
-
-def get_hostname_from_reverse_dns(ip):
-    """Try to get hostname via reverse DNS"""
-    try:
-        hostname = socket.gethostbyaddr(ip)[0]
-        if hostname:
-            return hostname
-    except Exception:
-        pass
-    return None
-
-
-def ping_host(ip):
-    """Ping host to check if it's alive"""
-    try:
-        result = subprocess.run(
-            ["ping", "-c", "1", "-W", "1", ip],
-            capture_output=True,
-            text=True,
-            timeout=2
-        )
-        return result.returncode == 0
-    except Exception:
-        return False
-
-
-def scan_network_host(ip):
-    """Scan a single host with optimized nmap for open ports and services"""
-    try:
-        # Fast TCP connect scan with improved timeouts
-        result = subprocess.run(
-            ["nmap", "-sV", "-p", "22,80,443,3000,8000,8080,8443,9000,5000,5900,631,3306,5432,25,53,110,143,161,389,6379", 
-             "--open", "--max-retries", "2", "--host-timeout", "30s",
-             "--max-rtt-timeout", "2000ms", "--initial-rtt-timeout", "500ms", 
-             "-T4", "-n", ip],
-            capture_output=True,
-            text=True,
-            timeout=35
-        )
-        
-        services = []
-        if result.returncode == 0:
-            lines = result.stdout.split('\n')
-            for line in lines:
-                if '/tcp' in line and 'open' in line:
-                    parts = line.split()
-                    if len(parts) >= 3:
-                        port_service = parts[0]
-                        status = parts[1]
-                        service = ' '.join(parts[2:]) if len(parts) > 2 else "Unknown"
-                        services.append({
-                            "port": port_service,
-                            "status": status,
-                            "service": service
-                        })
-        
-        return services
-    except Exception as e:
-        return []
-
-
-def scan_static_device_enhanced(ip):
-    """Enhanced scan for static devices using multiple methods"""
-    data = {
-        'hostname': None,
-        'mac': None,
-        'vendor': None,
-        'services': [],
-        'alive': False
-    }
-    
-    # 1. Ping test (this also populates ARP cache)
-    data['alive'] = ping_host(ip)
-    
-    if not data['alive']:
-        return data
-    
-    # 2. Try ARP for MAC address (give it a moment after ping)
-    time.sleep(0.1)  # Small delay to let ARP cache update
-    mac = get_mac_from_arp(ip)
-    if mac:
-        data['mac'] = mac
-        # Get vendor from MAC
-        data['vendor'] = get_mac_vendor(mac)
-    
-    # 3. Try reverse DNS for hostname
-    hostname = get_hostname_from_reverse_dns(ip)
-    if hostname:
-        data['hostname'] = hostname
-    
-    # 4. Try SNMP for hostname (if reverse DNS failed)
-    if not data['hostname']:
-        snmp_hostname = get_hostname_from_snmp(ip, "home")
-        if snmp_hostname:
-            data['hostname'] = snmp_hostname
-    
-    # 5. Nmap port scan for services
-    data['services'] = scan_network_host(ip)
-    
-    return data
 
 
 def network_scanner_thread():
@@ -1048,17 +599,7 @@ def network_scanner_thread():
             time.sleep(10)
 
 
-def ping_host(ip):
-    """Check if host is alive using ping"""
-    try:
-        result = subprocess.run(
-            ["ping", "-c", "1", "-W", "1", ip],
-            capture_output=True,
-            timeout=2
-        )
-        return result.returncode == 0
-    except:
-        return False
+def send_kea_command(command):
     """Send command to Kea via Unix socket"""
     try:
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -1553,7 +1094,7 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
         elif parsed.path.startswith("/static/"):
             # Serve static files
             file_path = parsed.path[1:]  # Remove leading /
-            full_path = os.path.join("/opt/ultimate-dashboard", file_path)
+            full_path = os.path.join(str(SCRIPT_DIR), file_path)
             
             if os.path.isfile(full_path):
                 self.send_response(200)

@@ -1,23 +1,29 @@
-.git/
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+*.py[cod]
+*$py.class
 *.so
-*.egg
+.Python
+env/
+venv/
 *.egg-info/
 dist/
 build/
+
+# Logs
+logs/
 *.log
-.venv/
-venv/
-ENV/
-.idea/
+
+# Configuration (contains sensitive data)
+etc/ultimate-dashboard.conf
+
+# IDE
 .vscode/
+.idea/
 *.swp
 *.swo
 *~
+
+# OS
 .DS_Store
-config.ini
-*.db
+Thumbs.db
