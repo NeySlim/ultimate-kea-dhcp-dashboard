@@ -1899,7 +1899,7 @@ def generate_html(info, lang="fr"):
             let settings = {{
                 refreshInterval: 5000,
                 theme: 'ember',
-                lang: 'fr',
+                lang: '{lang}',
                 scanEnabled: true,  // Scan enabled by default
                 sortState: {{
                     poolsTable: {{ column: null, direction: 'asc' }},
@@ -1907,6 +1907,61 @@ def generate_html(info, lang="fr"):
                     staticDevicesTable: {{ column: null, direction: 'asc' }}
                 }}
             }};
+            
+            // Client-side translations
+            const translations = {{
+                fr: {{
+                    last_update: "Dernière mise à jour",
+                    scan_active: "Scan réseau actif",
+                    scan_paused: "Scan réseau en pause",
+                    resume_scan: "Reprendre le scan",
+                    pause_scan: "Mettre en pause le scan",
+                    scan_in_pause: "Scan en pause",
+                    pause_resume_scan: "Pause/Resume scan"
+                }},
+                en: {{
+                    last_update: "Last update",
+                    scan_active: "Network scan active",
+                    scan_paused: "Network scan paused",
+                    resume_scan: "Resume scan",
+                    pause_scan: "Pause scan",
+                    scan_in_pause: "Scan paused",
+                    pause_resume_scan: "Pause/Resume scan"
+                }},
+                es: {{
+                    last_update: "Última actualización",
+                    scan_active: "Escaneo de red activo",
+                    scan_paused: "Escaneo de red en pausa",
+                    resume_scan: "Reanudar escaneo",
+                    pause_scan: "Pausar escaneo",
+                    scan_in_pause: "Escaneo en pausa",
+                    pause_resume_scan: "Pausar/Reanudar escaneo"
+                }},
+                de: {{
+                    last_update: "Letzte Aktualisierung",
+                    scan_active: "Netzwerk-Scan aktiv",
+                    scan_paused: "Netzwerk-Scan pausiert",
+                    resume_scan: "Scan fortsetzen",
+                    pause_scan: "Scan pausieren",
+                    scan_in_pause: "Scan pausiert",
+                    pause_resume_scan: "Scan pausieren/fortsetzen"
+                }},
+                th: {{
+                    last_update: "อัปเดตล่าสุด",
+                    scan_active: "สแกนเครือข่ายทำงาน",
+                    scan_paused: "สแกนเครือข่ายหยุดชั่วคราว",
+                    resume_scan: "ดำเนินการสแกนต่อ",
+                    pause_scan: "หยุดสแกนชั่วคราว",
+                    scan_in_pause: "สแกนหยุดชั่วคราว",
+                    pause_resume_scan: "หยุด/ดำเนินการสแกน"
+                }}
+            }};
+            
+            // Get translation
+            function t(key) {{
+                const lang = settings.lang || 'fr';
+                return translations[lang]?.[key] || translations['fr'][key] || key;
+            }}
             
             let refreshTimer = null;
             let countdownTimer = null;
@@ -2190,12 +2245,27 @@ def generate_html(info, lang="fr"):
                 const saved = localStorage.getItem('dashboardSettings');
                 if (saved) {{
                     try {{
-                        settings = JSON.parse(saved);
+                        const loadedSettings = JSON.parse(saved);
+                        // Merge with current settings
+                        settings = {{ ...settings, ...loadedSettings }};
                         console.log('Loaded settings:', settings);
                     }} catch(e) {{
                         console.error('Failed to load settings:', e);
                     }}
                 }}
+                
+                // Check if URL has lang parameter and sync with localStorage
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlLang = urlParams.get('lang');
+                if (urlLang) {{
+                    settings.lang = urlLang;
+                    saveSettings();
+                }} else if (settings.lang && settings.lang !== '{lang}') {{
+                    // If lang in settings differs from page lang, reload with correct lang
+                    window.location.href = `/?lang=${{settings.lang}}`;
+                    return;
+                }}
+                
                 updateRefreshIntervalUI();
                 updateThemeUI();
                 updateLangUI();
@@ -2313,7 +2383,7 @@ def generate_html(info, lang="fr"):
                         // Update timestamp
                         const timestampEl = document.querySelector('.timestamp');
                         if (timestampEl) {{
-                            timestampEl.textContent = `Dernière mise à jour: ${{data.timestamp}}`;
+                            timestampEl.textContent = `${{t('last_update')}}: ${{data.timestamp}}`;
                         }}
                         
                         // Reset countdown
@@ -2365,7 +2435,7 @@ def generate_html(info, lang="fr"):
                 
                 let html = '';
                 if (pools.length === 0) {{
-                    html = '<tr><td colspan="3">Aucun pool trouvé</td></tr>';
+                    html = `<tr><td colspan="3">No pools found</td></tr>`;
                 }} else {{
                     pools.forEach(pool => {{
                         html += `<tr>
@@ -2385,7 +2455,9 @@ def generate_html(info, lang="fr"):
                 if (!tbody) return;
                 
                 // Update via full page method to keep server-side rendering (SVG icons, services)
-                fetch(window.location.href)
+                // Pass language parameter from settings
+                const url = `/?lang=${{settings.lang}}`;
+                fetch(url)
                     .then(response => response.text())
                     .then(html => {{
                         const parser = new DOMParser();
@@ -2416,7 +2488,9 @@ def generate_html(info, lang="fr"):
                 if (!tbody) return;
                 
                 // Update via full page method to keep server-side rendering (SVG icons, services)
-                fetch(window.location.href)
+                // Pass language parameter from settings
+                const url = `/?lang=${{settings.lang}}`;
+                fetch(url)
                     .then(response => response.text())
                     .then(html => {{
                         const parser = new DOMParser();
@@ -2466,10 +2540,10 @@ def generate_html(info, lang="fr"):
                     if (iconSpan) {{
                         iconSpan.innerHTML = scanPaused ? playIcon : pauseIcon;
                     }}
-                    pauseScanBtn.title = scanPaused ? 'Reprendre le scan' : 'Mettre en pause le scan';
+                    pauseScanBtn.title = scanPaused ? t('resume_scan') : t('pause_scan');
                 }}
                 if (scanStatusEl) {{
-                    scanStatusEl.textContent = scanPaused ? 'Scan réseau en pause' : 'Scan réseau actif';
+                    scanStatusEl.textContent = scanPaused ? t('scan_paused') : t('scan_active');
                 }}
                 
                 // Restore individual states on initial load
@@ -2486,11 +2560,11 @@ def generate_html(info, lang="fr"):
                         if (iconSpan) {{
                             iconSpan.innerHTML = scanPaused ? playIcon : pauseIcon;
                         }}
-                        pauseScanBtn.title = scanPaused ? 'Reprendre le scan' : 'Mettre en pause le scan';
+                        pauseScanBtn.title = scanPaused ? t('resume_scan') : t('pause_scan');
                         
                         // Update status text
                         if (scanStatusEl) {{
-                            scanStatusEl.textContent = scanPaused ? 'Scan réseau en pause' : 'Scan réseau actif';
+                            scanStatusEl.textContent = scanPaused ? t('scan_paused') : t('scan_active');
                         }}
                         
                         // Update all individual buttons while preserving their states
