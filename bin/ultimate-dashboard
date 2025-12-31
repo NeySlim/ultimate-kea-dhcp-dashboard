@@ -1014,9 +1014,10 @@ def enrich_single_lease(lease):
         lease["vendor"] = vendor
         
         # Get device type (don't pass ip as device_info, pass None)
-        device_icon, device_type = get_device_type(hostname, vendor, hw_address, None)
+        device_icon, device_type, icon_name = get_device_type(hostname, vendor, hw_address, None)
         lease["device_icon"] = device_icon
         lease["device_type"] = device_type
+        lease["icon_name"] = icon_name
     except Exception as e:
         pass
 
@@ -1148,6 +1149,22 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
             
             stats = get_system_stats()
             self.wfile.write(json.dumps(stats).encode())
+        elif parsed.path.startswith("/api/icons/"):
+            # API endpoint for theme icons
+            theme_name = parsed.path.split("/")[-1]
+            icon_file = SCRIPT_DIR / "static" / "icons" / f"theme-icons-{theme_name}.json"
+            
+            if icon_file.exists():
+                self.send_response(200)
+                self.send_header("Content-type", "application/json; charset=utf-8")
+                self.send_header("Cache-Control", "public, max-age=3600")
+                self.end_headers()
+                
+                with open(icon_file, 'r') as f:
+                    self.wfile.write(f.read().encode())
+            else:
+                self.send_response(404)
+                self.end_headers()
         elif parsed.path.startswith("/static/"):
             # Serve static files
             file_path = parsed.path[1:]  # Remove leading /
@@ -1952,6 +1969,43 @@ def generate_html(info, lang="fr"):
                 }}
             }};
             
+            // Cache for theme icons
+            let themeIcons = {{}};
+            let currentTheme = 'ember';
+            
+            // Load theme icons from API
+            async function loadThemeIcons(theme) {{
+                if (themeIcons[theme]) {{
+                    return themeIcons[theme];
+                }}
+                
+                try {{
+                    const response = await fetch(`/api/icons/${{theme}}`);
+                    if (response.ok) {{
+                        const icons = await response.json();
+                        themeIcons[theme] = icons;
+                        console.log(`Loaded ${{Object.keys(icons).length}} icons for theme ${{theme}}`);
+                        return icons;
+                    }}
+                }} catch (err) {{
+                    console.error(`Failed to load icons for theme ${{theme}}:`, err);
+                }}
+                
+                return null;
+            }}
+            
+            // Get SVG icon HTML for a device
+            function getDeviceIconSVG(iconName) {{
+                const icons = themeIcons[currentTheme];
+                if (icons && icons[iconName]) {{
+                    // Wrap SVG in a span with inline display
+                    return `<span class="device-icon" style="display: inline-block; vertical-align: middle; width: 32px; height: 32px;">${{icons[iconName]}}</span>`;
+                }}
+                // Fallback to null (will use emoji)
+                return null;
+            }}
+
+            
             // Client-side translations
             const translations = {{
                 fr: {{
@@ -2553,8 +2607,9 @@ def generate_html(info, lang="fr"):
                     const startTime = formatTimestamp(lease.expire - lease.valid_lft);
                     const ip = lease.ip_address;
                     
-                    // Use custom icon HTML if available, otherwise use emoji
-                    const icon = lease.icon_html || lease.device_icon || '❓';
+                    // Get device icon (SVG if available, emoji fallback)
+                    const iconSVG = getDeviceIconSVG(lease.icon_name);
+                    const icon = iconSVG || lease.device_icon || '❓';
                     
                     // Build scan status
                     let scanStatus = '';
@@ -2613,7 +2668,8 @@ def generate_html(info, lang="fr"):
                 let html = '';
                 devices.forEach(device => {{
                     const typeBadge = `<span class="badge badge-${{device.type}}">${{t(device.type) || device.type}}</span>`;
-                    const icon = device.device_icon || '🔧';
+                    const iconSVG = getDeviceIconSVG(device.icon_name);
+                    const icon = iconSVG || device.device_icon || '🔧';
                     const ip = device.ip_address;
                     
                     // Build scan status

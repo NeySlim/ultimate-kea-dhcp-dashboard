@@ -50,7 +50,9 @@ def format_service_link(ip, port_service, service_name):
 
 
 def get_device_type(hostname, vendor, mac, device_info=None):
-    """Detect device type from all available sources"""
+    """Detect device type from all available sources
+    Returns: (emoji, label, icon_name) where icon_name is for SVG icons
+    """
     h = hostname.lower() if hostname and hostname != "N/A" else ""
     v = vendor.lower() if vendor else ""
     m = mac.lower() if mac else ""
@@ -65,134 +67,134 @@ def get_device_type(hostname, vendor, mac, device_info=None):
     
     # Cameras
     if any(x in combined for x in ["dafang", "camera", "webcam", "hikvision", "dahua", "reolink", "wyze", "ring", "doorbell", "video", "ipcam", "cam-"]):
-        return ("📷", "Camera")
+        return ("📷", "Camera", "camera")
     
     # Samsung devices
     if "samsung" in v or "s24" in h or "galaxy" in h or "tab-a" in h or "sm-" in h:
         if any(x in h for x in ["tab", "tablet"]):
-            return ("📱", "Samsung Tablet")
+            return ("📱", "Samsung Tablet", "tablet")
         elif any(x in h for x in ["s24", "s23", "s22", "s21", "s20", "galaxy", "phone"]):
-            return ("📱", "Samsung Phone")
+            return ("📱", "Samsung Phone", "samsung-mobile")
         elif "tv" in h:
-            return ("📺", "Samsung TV")
+            return ("📺", "Samsung TV", "tv")
         else:
-            return ("📱", "Samsung")
+            return ("📱", "Samsung", "samsung-mobile")
     
     # Apple devices
     if any(x in h for x in ["macbook", "imac", "mac-", "iphone", "ipad"]):
         if "macbook" in h or "imac" in h or "mac" in h:
-            return ("🍎", "Apple Mac")
+            return ("🍎", "Apple Mac", "apple-mac")
         elif "iphone" in h:
-            return ("🍎", "iPhone")
+            return ("🍎", "iPhone", "apple-mobile")
         elif "ipad" in h:
-            return ("🍎", "iPad")
+            return ("🍎", "iPad", "tablet")
         else:
-            return ("🍎", "Apple")
+            return ("🍎", "Apple", "apple-mobile")
     
     if any(x in v for x in ["apple"]):
-        return ("🍎", "Apple")
+        return ("🍎", "Apple", "apple-mobile")
     
     # Amazon devices
     if "amazon" in v:
         if any(x in combined for x in ["echo", "alexa", "dot"]):
-            return ("🔊", "Amazon Echo")
+            return ("🔊", "Amazon Echo", "smart-home")
         elif any(x in combined for x in ["fire", "firetv", "stick"]):
-            return ("📺", "Fire TV")
+            return ("📺", "Fire TV", "tv")
         else:
-            return ("📦", "Amazon Device")
+            return ("📦", "Amazon Device", "iot")
     
     # TV & Media devices
     if any(x in h for x in ["tv", "tele", "television"]):
         if "philips" in combined or "phillips" in combined:
-            return ("📺", "Philips TV")
+            return ("📺", "Philips TV", "tv")
         elif "samsung" in combined:
-            return ("📺", "Samsung TV")
+            return ("📺", "Samsung TV", "tv")
         elif "lg" in combined:
-            return ("📺", "LG TV")
+            return ("📺", "LG TV", "tv")
         else:
-            return ("📺", "TV")
+            return ("📺", "TV", "tv")
     
     if any(x in combined for x in ["samsung tv", "lg tv", "sony tv", "philips", "panasonic", "toshiba", "vizio", "roku", "firestick", "appletv", "android tv", "smarttv", "hisense", "sharp"]):
-        return ("📺", "TV")
+        return ("📺", "TV", "tv")
     
     # Smartphones
     if any(x in h for x in ["phone", "mobile", "pixel", "oneplus", "redmi"]):
-        return ("📱", "Smartphone")
+        return ("📱", "Smartphone", "mobile")
     
     if any(x in combined for x in ["android", "pixel", "htc", "motorola", "oneplus", "redmi", "realme", "oppo", "vivo"]):
-        return ("📱", "Smartphone")
+        return ("📱", "Smartphone", "mobile")
     
     # Tablets
     if any(x in h for x in ["tablet", "tab-", "ipad"]):
-        return ("📱", "Tablet")
+        return ("📱", "Tablet", "tablet")
     
     # Xiaomi devices
     if "xiaomi" in v:
         if any(x in h for x in ["camera", "cam", "dafang"]):
-            return ("📷", "Xiaomi Camera")
+            return ("📷", "Xiaomi Camera", "camera")
         elif any(x in h for x in ["phone", "redmi", "mi-", "poco"]):
-            return ("📱", "Xiaomi Phone")
+            return ("📱", "Xiaomi Phone", "mobile")
         elif "tv" in h:
-            return ("📺", "Xiaomi TV")
+            return ("📺", "Xiaomi TV", "tv")
         else:
-            return ("🔌", "Xiaomi Device")
+            return ("🔌", "Xiaomi Device", "iot")
     
     # Routers & Network
     if any(x in combined for x in ["router", "gateway", "access point", "ap-", "ap_", "wifi", "ubiquiti", "tp-link", "netgear", "cisco", "asus", "linksys", "mikrotik", "fortinet", "d-link", "meraki", "ieee registration authority"]):
-        return ("📡", "Router/AP")
+        return ("📡", "Router/AP", "router")
     
     # Printers
     if any(x in combined for x in ["print", "brother", "hp", "xerox", "canon", "epson", "ricoh", "konica", "minolta"]):
-        return ("🖨️", "Printer")
+        return ("🖨️", "Printer", "printer")
     
     # Smart Home & IoT
     if any(x in combined for x in ["esp", "esp32", "esp8266", "esp8285", "espressif", "arduino", "home", "smart", "homekit", "zigbee", "zwave", "mqtt", "sonoff", "shelly", "tasmota", "tuya"]):
-        return ("🔌", "Smart Home")
+        return ("🔌", "Smart Home", "iot")
     
     # Laptops & Desktops
     if any(x in combined for x in ["laptop", "desktop", "pc", "computer", "dell", "hp", "lenovo", "asus", "acer", "msi", "windows", "linux", "workstation"]):
-        return ("💻", "Computer")
+        return ("💻", "Computer", "laptop")
     
     # Raspberry Pi & SBC
     if any(x in combined for x in ["raspi", "raspberry", "rpi", "pi", "jetson", "odroid", "beaglebone"]):
-        return ("🍓", "Raspberry Pi")
+        return ("🍓", "Raspberry Pi", "iot")
     
     # Servers & NAS (check before generic "server" pattern)
     if any(x in combined for x in ["proxmox", "esxi", "vmware", "vcenter", "hypervisor", "truenas", "freenas"]):
-        return ("🖥️", "Server")
+        return ("🖥️", "Server", "server")
     
     if any(x in combined for x in ["server", "nas", "synology", "qnap", "pfsense", "homelab", "unraid"]):
-        return ("⚙️", "Server/NAS")
+        return ("⚙️", "Server/NAS", "nas")
     
     # Smart TVs & Media Players
     if any(x in combined for x in ["chromecast", "nvidia shield", "kodi", "plex", "media"]):
-        return ("📺", "Media Player")
+        return ("📺", "Media Player", "tv")
     
     # Gaming
     if any(x in combined for x in ["gaming", "xbox", "playstation", "ps4", "ps5", "nintendo", "steam", "switch"]):
-        return ("🎮", "Gaming")
+        return ("🎮", "Gaming", "gaming")
     
     # Audio & Speakers
     if any(x in combined for x in ["speaker", "audio", "sonos", "bose", "harman", "denon", "yamaha", "amplifier"]):
-        return ("🔊", "Audio")
+        return ("🔊", "Audio", "smart-home")
     
     # Smartwatch & Wearables
     if any(x in combined for x in ["watch", "fitbit", "garmin", "smartband", "wearable"]):
-        return ("⌚", "Wearable")
+        return ("⌚", "Wearable", "iot")
     
     # Scanners
     if any(x in combined for x in ["scanner", "mfp", "multifunction"]):
-        return ("📄", "Scanner")
+        return ("📄", "Scanner", "printer")
     
     # Network Storage
     if any(x in combined for x in ["storage", "backup", "hdd", "ssd"]):
-        return ("💾", "Storage")
+        return ("💾", "Storage", "nas")
     
     # Chinese tech company devices
     if "hui zhou gaoshengda" in v or "gaoshengda" in v:
         if "tv" in h or "tele" in h:
-            return ("📺", "TV Box")
+            return ("📺", "TV Box", "tv")
         else:
-            return ("📺", "Media Box")
+            return ("📺", "Media Box", "tv")
     
-    return ("❓", "Unknown")
+    return ("❓", "Unknown", "unknown")
