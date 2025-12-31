@@ -1071,9 +1071,22 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                     is_scanning = SCAN_IN_PROGRESS.get(ip, False)
                     last_scan = LAST_SCAN_TIME.get(ip, 0)
                 
+                # Format services with HTML links and icons
+                services_html = []
+                for svc in services:
+                    port = svc['port']
+                    service = svc['service']
+                    service_link = format_service_link(ip, port, service)
+                    services_html.append(service_link)
+                
+                # Get custom icon HTML if available
+                custom_svg = get_custom_icon_svg(lease.get('hostname', ''))
+                
                 lease_copy['services'] = services
+                lease_copy['services_html'] = services_html
                 lease_copy['is_scanning'] = is_scanning
                 lease_copy['last_scan'] = last_scan
+                lease_copy['icon_html'] = custom_svg if custom_svg else None
                 
                 leases.append(lease_copy)
             
@@ -1098,7 +1111,16 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 if enhanced.get('vendor') and device_copy.get('vendor') in ['Unknown', None, '']:
                     device_copy['vendor'] = enhanced['vendor']
                 
+                # Format services with HTML links and icons
+                services_html = []
+                for svc in services:
+                    port = svc['port']
+                    service = svc['service']
+                    service_link = format_service_link(ip, port, service)
+                    services_html.append(service_link)
+                
                 device_copy['services'] = services
+                device_copy['services_html'] = services_html
                 device_copy['is_scanning'] = is_scanning
                 device_copy['last_scan'] = last_scan
                 
@@ -2525,8 +2547,8 @@ def generate_html(info, lang="fr"):
                     const startTime = formatTimestamp(lease.expire - lease.valid_lft);
                     const ip = lease.ip_address;
                     
-                    // Simple icon (no custom SVG for now)
-                    const icon = lease.device_icon || '❓';
+                    // Use custom icon HTML if available, otherwise use emoji
+                    const icon = lease.icon_html || lease.device_icon || '❓';
                     
                     // Build scan status
                     let scanStatus = '';
@@ -2544,25 +2566,14 @@ def generate_html(info, lang="fr"):
                         scanStatus = '<span title="Jamais scanné" class="scan-icon">❌</span>';
                     }}
                     
-                    // Build services list
-                    let servicesHtml = '';
-                    if (lease.services && lease.services.length > 0) {{
-                        lease.services.forEach(svc => {{
-                            const serviceName = svc.service || 'unknown';
-                            const port = svc.port ? svc.port.split('/')[0] : '';  // Extract port number only
-                            const protocol = serviceName.toLowerCase().includes('http') ? serviceName.split(' ')[0] : '';
-                            
-                            let link = '#';
-                            if (protocol === 'http' || protocol === 'https') {{
-                                link = `${{protocol}}://${{ip}}:${{port}}`;
-                            }} else if (port && !isNaN(port)) {{
-                                link = `http://${{ip}}:${{port}}`;  // Default to http for clickable links
-                            }}
-                            
-                            servicesHtml += `<li><a href="${{link}}" target="_blank" class="service-link" title="${{serviceName}}">${{serviceName}}</a></li>`;
-                        }});
+                    // Use pre-formatted services HTML from server
+                    let servicesCol = '';
+                    if (lease.services_html && lease.services_html.length > 0) {{
+                        const servicesItems = lease.services_html.join('');
+                        servicesCol = `<ul style="margin:0;padding-left:20px;">${{servicesItems}}</ul>`;
+                    }} else {{
+                        servicesCol = `<em class="no-service">${{t('no_service')}}</em>`;
                     }}
-                    const servicesCol = servicesHtml ? `<ul style="margin:0;padding-left:20px;">${{servicesHtml}}</ul>` : `<em class="no-service">${{t('no_service')}}</em>`;
                     
                     html += `<tr class="${{stateClass}}">
                         <td style="font-size: 1.3em; text-align: center;" title="${{lease.device_type || 'Unknown'}}">${{icon}}</td>
@@ -2615,25 +2626,14 @@ def generate_html(info, lang="fr"):
                         scanStatus = '<span title="Jamais scanné" class="scan-icon">❌</span>';
                     }}
                     
-                    // Build services list
-                    let servicesHtml = '';
-                    if (device.services && device.services.length > 0) {{
-                        device.services.forEach(svc => {{
-                            const serviceName = svc.service || 'unknown';
-                            const port = svc.port ? svc.port.split('/')[0] : '';  // Extract port number only
-                            const protocol = serviceName.toLowerCase().includes('http') ? serviceName.split(' ')[0] : '';
-                            
-                            let link = '#';
-                            if (protocol === 'http' || protocol === 'https') {{
-                                link = `${{protocol}}://${{ip}}:${{port}}`;
-                            }} else if (port && !isNaN(port)) {{
-                                link = `http://${{ip}}:${{port}}`;  // Default to http for clickable links
-                            }}
-                            
-                            servicesHtml += `<li><a href="${{link}}" target="_blank" class="service-link" title="${{serviceName}}">${{serviceName}}</a></li>`;
-                        }});
+                    // Use pre-formatted services HTML from server
+                    let servicesCol = '';
+                    if (device.services_html && device.services_html.length > 0) {{
+                        const servicesItems = device.services_html.join('');
+                        servicesCol = `<ul style="margin:0;padding-left:20px;">${{servicesItems}}</ul>`;
+                    }} else {{
+                        servicesCol = `<em class="no-service">${{t('no_service')}}</em>`;
                     }}
-                    const servicesCol = servicesHtml ? `<ul style="margin:0;padding-left:20px;">${{servicesHtml}}</ul>` : `<em class="no-service">${{t('no_service')}}</em>`;
                     
                     html += `<tr>
                         <td style="font-size: 1.3em; text-align: center;" title="${{device.device_type || 'Unknown'}}">${{icon}}</td>
