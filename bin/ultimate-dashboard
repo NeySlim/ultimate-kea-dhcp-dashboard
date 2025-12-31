@@ -256,7 +256,6 @@ DEFAULT_CONFIG = {
     'enable_mdns': True,
     'mdns_timeout': 1,
     'enable_scanner': True,
-    'scanner_subnet': '192.168.1.0/24',
     'scanner_timeout': 5
 }
 
@@ -2695,6 +2694,7 @@ if __name__ == "__main__":
     print(f"[INFO] SNMP enabled: {config['enable_snmp']}")
     print(f"[INFO] mDNS enabled: {config['enable_mdns']}")
     print(f"[INFO] Network scanner enabled: {config['enable_scanner']}")
+    print(f"[INFO] Subnet and pool information retrieved automatically from Kea")
     
     # Initialize DHCP cache in background (non-blocking)
     print("[INFO] Starting background DHCP cache initialization...")
@@ -2702,7 +2702,6 @@ if __name__ == "__main__":
     cache_thread.start()
     
     if config['enable_scanner']:
-        print(f"[INFO] Scanner subnet: {config['scanner_subnet']}")
         # Start background scanner thread
         SCAN_THREAD = threading.Thread(target=network_scanner_thread, daemon=True)
         SCAN_THREAD.start()

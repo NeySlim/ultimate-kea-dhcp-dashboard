@@ -2,6 +2,8 @@
 
 A modern, real-time web dashboard for monitoring ISC Kea DHCP server leases, pools, and network devices with advanced scanning capabilities and system metrics visualization.
 
+![Dashboard Screenshot](docs/images/dashboard-screenshot.png)
+
 ## Features
 
 ### DHCP Monitoring
@@ -100,18 +102,31 @@ port = 8089
 ssl_enabled = true
 
 # Kea paths
+# The dashboard automatically retrieves subnet and pool information from Kea via the control socket
 kea_config = /etc/kea/kea-dhcp4.conf
-kea_leases = /var/lib/kea/kea-leases4.csv
-
-# Network settings
-subnet = 192.168.1.0/24
-dhcp_range_start = 192.168.1.100
-dhcp_range_end = 192.168.1.200
+kea_leases = /var/lib/kea/kea-leases4.csv  # Used as fallback if socket unavailable
 
 # Scanning
 scan_threads = 50
 scan_timeout = 0.5
 ```
+
+**Note:** Subnet and pool information is automatically retrieved from Kea DHCP configuration via the control socket (`/run/kea/kea4-ctrl-socket`). No manual network configuration required.
+
+## Screenshots
+
+The dashboard provides a comprehensive view of your DHCP infrastructure:
+
+![Dashboard Screenshot](docs/images/dashboard-screenshot.png)
+
+Features shown:
+- **Real-time system metrics**: CPU per-core, RAM, Network, and Disk usage gauges
+- **DHCP Pools**: Automatic detection from Kea configuration with subnet and DNS domain info
+- **Active Leases**: Live DHCP clients with hostname resolution, MAC vendor lookup, and service detection
+- **Static Devices & Reservations**: Network devices outside DHCP pools and DHCP reservations
+- **Service Discovery**: Automatic detection of running services (SSH, HTTP, HTTPS, etc.)
+- **Theme Support**: Multiple professional color schemes
+- **Multi-language**: French, English, Spanish, German, Thai
 
 ## Usage
 
