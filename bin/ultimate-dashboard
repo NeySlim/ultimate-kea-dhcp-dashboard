@@ -1922,7 +1922,13 @@ def generate_html(info, lang="fr"):
                     resume_scan: "Reprendre le scan",
                     pause_scan: "Mettre en pause le scan",
                     scan_in_pause: "Scan en pause",
-                    pause_resume_scan: "Pause/Resume scan"
+                    pause_resume_scan: "Pause/Resume scan",
+                    no_service: "Aucun service",
+                    clients: "clients",
+                    devices: "dispositifs",
+                    reservation: "Réservation",
+                    static: "Statique",
+                    no_static_devices: "Aucun dispositif statique trouvé"
                 }},
                 en: {{
                     last_update: "Last update",
@@ -1931,7 +1937,13 @@ def generate_html(info, lang="fr"):
                     resume_scan: "Resume scan",
                     pause_scan: "Pause scan",
                     scan_in_pause: "Scan paused",
-                    pause_resume_scan: "Pause/Resume scan"
+                    pause_resume_scan: "Pause/Resume scan",
+                    no_service: "No service",
+                    clients: "clients",
+                    devices: "devices",
+                    reservation: "Reservation",
+                    static: "Static",
+                    no_static_devices: "No static devices found"
                 }},
                 es: {{
                     last_update: "Última actualización",
@@ -2380,39 +2392,35 @@ def generate_html(info, lang="fr"):
                 }}
             }}
             
-            // Update tables with AJAX
+            // Update tables with AJAX using API
             function updateTables() {{
-                // Fetch full page once with language parameter to get server-rendered content
-                const url = `/?lang=${{settings.lang}}`;
-                fetch(url)
-                    .then(response => response.text())
-                    .then(html => {{
-                        const parser = new DOMParser();
-                        const newDoc = parser.parseFromString(html, 'text/html');
-                        
+                fetch('/api/data')
+                    .then(response => response.json())
+                    .then(data => {{
                         // Update timestamp
                         const timestampEl = document.querySelector('.timestamp');
-                        const newTimestamp = newDoc.querySelector('.timestamp');
-                        if (timestampEl && newTimestamp) {{
-                            timestampEl.textContent = newTimestamp.textContent;
+                        if (timestampEl) {{
+                            timestampEl.textContent = `${{t('last_update')}}: ${{data.timestamp}}`;
                         }}
                         
                         // Reset countdown
                         timeLeft = Math.floor(settings.refreshInterval / 1000);
                         
-                        // Update all tables from the same fetched page
-                        updatePoolsTableFromDoc(newDoc);
-                        updateLeasesTableFromDoc(newDoc);
-                        updateStaticDevicesTableFromDoc(newDoc);
+                        // Update all tables with data
+                        updatePoolsTableFromData(data.pools);
+                        updateLeasesTableFromData(data.leases);
+                        updateStaticDevicesTableFromData(data.static_devices || []);
                         
                         // Update header counts
-                        const allOldHeaders = document.querySelectorAll('h2');
-                        const allNewHeaders = newDoc.querySelectorAll('h2');
-                        allOldHeaders.forEach((h, idx) => {{
-                            if (allNewHeaders[idx]) {{
-                                h.textContent = allNewHeaders[idx].textContent;
-                            }}
-                        }});
+                        const leasesHeader = document.querySelector('h2:nth-of-type(2)');
+                        if (leasesHeader) {{
+                            leasesHeader.textContent = `${{data.leases.length}} ${{t('clients')}}`;
+                        }}
+                        
+                        const staticHeader = document.querySelector('h2:nth-of-type(3)');
+                        if (staticHeader) {{
+                            staticHeader.textContent = `${{data.static_devices.length}} ${{t('devices')}}`;
+                        }}
                     }})
                     .catch(err => console.log('Update error:', err));
             }}
@@ -2421,6 +2429,26 @@ def generate_html(info, lang="fr"):
             function savePausedIPs() {{
                 settings.pausedIPs = Array.from(pausedIPs);
                 saveSettings();
+            }}
+            
+            // Format timestamp helper
+            function formatTimestamp(timestamp) {{
+                if (!timestamp || timestamp <= 0) return 'N/A';
+                const date = new Date(timestamp * 1000);
+                return date.toLocaleString('fr-FR', {{
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                }});
+            }}
+            
+            // Get scan countdown for IP
+            function getScanCountdown(ip) {{
+                // This will be populated by the scan status from backend
+                return '';
             }}
             
             // Restore individual pause states after table refresh
@@ -2488,21 +2516,97 @@ def generate_html(info, lang="fr"):
                 }}
             }}
             
-            // Legacy functions kept for compatibility (now just wrappers)
-            function updatePoolsTable(pools) {{
-                // Trigger full refresh to maintain consistency
-                updateTables();
+            // Update tables from JSON data
+            function updatePoolsTableFromData(pools) {{
+                const tbody = document.querySelector('#poolsTable tbody');
+                if (!tbody) return;
+                
+                let html = '';
+                if (pools.length === 0) {{
+                    html = `<tr><td colspan="3">No pools found</td></tr>`;
+                }} else {{
+                    pools.forEach(pool => {{
+                        html += `<tr>
+                            <td>${{pool.pool || ''}}</td>
+                            <td>${{pool.subnet || ''}}</td>
+                            <td>${{pool.dns_domain || 'N/A'}}</td>
+                        </tr>`;
+                    }});
+                }}
+                
+                tbody.innerHTML = html;
+                applySavedSort('poolsTable');
             }}
             
-            function updateLeasesTable(leases) {{
-                // Trigger full refresh to maintain consistency
-                updateTables();
+            function updateLeasesTableFromData(leases) {{
+                const tbody = document.querySelector('#leasesTable tbody');
+                if (!tbody) return;
+                
+                if (leases.length === 0) {{
+                    tbody.innerHTML = '<tr><td colspan="10">No leases found</td></tr>';
+                    return;
+                }}
+                
+                let html = '';
+                leases.forEach(lease => {{
+                    const stateClass = lease.state === '0' ? 'active' : 'inactive';
+                    const expireTime = formatTimestamp(lease.expire);
+                    const startTime = formatTimestamp(lease.expire - lease.valid_lft);
+                    
+                    // Simple icon (no custom SVG for now)
+                    const icon = lease.device_icon || '❓';
+                    
+                    html += `<tr class="${{stateClass}}">
+                        <td style="font-size: 1.3em; text-align: center;" title="${{lease.device_type || 'Unknown'}}">${{icon}}</td>
+                        <td>${{lease.ip_address}}</td>
+                        <td>${{lease.hostname || 'N/A'}}</td>
+                        <td>${{lease.hw_address || 'N/A'}}</td>
+                        <td>${{lease.vendor || 'Unknown'}}</td>
+                        <td style="font-size: 0.85em;">⏱️</td>
+                        <td style="font-size: 0.9em;"><em class="no-service">${{t('no_service')}}</em></td>
+                        <td>${{startTime}}</td>
+                        <td>${{expireTime}}</td>
+                        <td>${{lease.valid_lft}}s</td>
+                    </tr>`;
+                }});
+                
+                tbody.innerHTML = html;
+                applySavedSort('leasesTable');
+                restoreIndividualPauseStates();
             }}
             
-            function updateStaticDevicesTable(staticDevices) {{
-                // Trigger full refresh to maintain consistency
-                updateTables();
+            function updateStaticDevicesTableFromData(devices) {{
+                const tbody = document.querySelector('#staticDevicesTable tbody');
+                if (!tbody) return;
+                
+                if (devices.length === 0) {{
+                    tbody.innerHTML = `<tr><td colspan="9">${{t('no_static_devices')}}</td></tr>`;
+                    return;
+                }}
+                
+                let html = '';
+                devices.forEach(device => {{
+                    const typeBadge = `<span class="badge badge-${{device.type}}">${{t(device.type) || device.type}}</span>`;
+                    const icon = device.device_icon || '🔧';
+                    
+                    html += `<tr>
+                        <td style="font-size: 1.3em; text-align: center;" title="${{device.device_type || 'Unknown'}}">${{icon}}</td>
+                        <td>${{typeBadge}}</td>
+                        <td>${{device.ip_address}}</td>
+                        <td>${{device.hostname || 'N/A'}}</td>
+                        <td>${{device.hw_address || 'N/A'}}</td>
+                        <td>${{device.vendor || 'Unknown'}}</td>
+                        <td style="font-size: 0.85em;">⏱️</td>
+                        <td style="font-size: 0.9em;"><em class="no-service">${{t('no_service')}}</em></td>
+                        <td>${{device.subnet || 'N/A'}}</td>
+                    </tr>`;
+                }});
+                
+                tbody.innerHTML = html;
+                applySavedSort('staticDevicesTable');
+                restoreIndividualPauseStates();
             }}
+            
             
             // Settings panel toggle
             document.addEventListener('DOMContentLoaded', function() {{
