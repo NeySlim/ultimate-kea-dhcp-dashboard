@@ -2533,7 +2533,7 @@ def generate_html(info, lang="fr"):
                     if (lease.is_scanning) {{
                         scanStatus = '<span title="Scan en cours" class="scan-icon">⏳</span>';
                     }} else if (lease.last_scan > 0) {{
-                        const timeSince = currentTime - lease.last_scan;
+                        const timeSince = currentTime - Math.floor(lease.last_scan);
                         const nextIn = Math.max(0, 60 - timeSince);
                         if (nextIn > 0) {{
                             scanStatus = '<span title="En attente" class="scan-icon">⏱️</span> <span class="scan-countdown">' + nextIn + 's</span>';
@@ -2548,12 +2548,18 @@ def generate_html(info, lang="fr"):
                     let servicesHtml = '';
                     if (lease.services && lease.services.length > 0) {{
                         lease.services.forEach(svc => {{
-                            const protocol = svc.service.toLowerCase();
-                            let link = `${{protocol}}://${{ip}}:${{svc.port}}`;
+                            const serviceName = svc.service || 'unknown';
+                            const port = svc.port ? svc.port.split('/')[0] : '';  // Extract port number only
+                            const protocol = serviceName.toLowerCase().includes('http') ? serviceName.split(' ')[0] : '';
+                            
+                            let link = '#';
                             if (protocol === 'http' || protocol === 'https') {{
-                                link = `${{protocol}}://${{ip}}:${{svc.port}}`;
+                                link = `${{protocol}}://${{ip}}:${{port}}`;
+                            }} else if (port && !isNaN(port)) {{
+                                link = `http://${{ip}}:${{port}}`;  // Default to http for clickable links
                             }}
-                            servicesHtml += `<li><a href="${{link}}" target="_blank" class="service-link">${{svc.service}}:${{svc.port}}</a></li>`;
+                            
+                            servicesHtml += `<li><a href="${{link}}" target="_blank" class="service-link" title="${{serviceName}}">${{serviceName}}</a></li>`;
                         }});
                     }}
                     const servicesCol = servicesHtml ? `<ul style="margin:0;padding-left:20px;">${{servicesHtml}}</ul>` : `<em class="no-service">${{t('no_service')}}</em>`;
@@ -2598,7 +2604,7 @@ def generate_html(info, lang="fr"):
                     if (device.is_scanning) {{
                         scanStatus = '<span title="Scan en cours" class="scan-icon">⏳</span>';
                     }} else if (device.last_scan > 0) {{
-                        const timeSince = currentTime - device.last_scan;
+                        const timeSince = currentTime - Math.floor(device.last_scan);
                         const nextIn = Math.max(0, 60 - timeSince);
                         if (nextIn > 0) {{
                             scanStatus = '<span title="En attente" class="scan-icon">⏱️</span> <span class="scan-countdown">' + nextIn + 's</span>';
@@ -2613,12 +2619,18 @@ def generate_html(info, lang="fr"):
                     let servicesHtml = '';
                     if (device.services && device.services.length > 0) {{
                         device.services.forEach(svc => {{
-                            const protocol = svc.service.toLowerCase();
-                            let link = `${{protocol}}://${{ip}}:${{svc.port}}`;
+                            const serviceName = svc.service || 'unknown';
+                            const port = svc.port ? svc.port.split('/')[0] : '';  // Extract port number only
+                            const protocol = serviceName.toLowerCase().includes('http') ? serviceName.split(' ')[0] : '';
+                            
+                            let link = '#';
                             if (protocol === 'http' || protocol === 'https') {{
-                                link = `${{protocol}}://${{ip}}:${{svc.port}}`;
+                                link = `${{protocol}}://${{ip}}:${{port}}`;
+                            }} else if (port && !isNaN(port)) {{
+                                link = `http://${{ip}}:${{port}}`;  // Default to http for clickable links
                             }}
-                            servicesHtml += `<li><a href="${{link}}" target="_blank" class="service-link">${{svc.service}}:${{svc.port}}</a></li>`;
+                            
+                            servicesHtml += `<li><a href="${{link}}" target="_blank" class="service-link" title="${{serviceName}}">${{serviceName}}</a></li>`;
                         }});
                     }}
                     const servicesCol = servicesHtml ? `<ul style="margin:0;padding-left:20px;">${{servicesHtml}}</ul>` : `<em class="no-service">${{t('no_service')}}</em>`;
