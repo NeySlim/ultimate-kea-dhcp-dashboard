@@ -2088,10 +2088,16 @@ def generate_html(info, lang="fr"):
             }};
             
             // Apply theme CSS
-            function applyTheme(themeName) {{
+            async function applyTheme(themeName) {{
                 const theme = themes[themeName] || themes.ember;
                 const isLight = themeName === 'clarity';
                 const shadowOpacity = isLight ? '0.1' : '0.2';
+                
+                // Load theme icons first
+                currentTheme = themeName;
+                settings.theme = themeName;
+                saveSettings();
+                await loadThemeIcons(themeName);
                 
                 const css = `
                     body {{
@@ -2716,8 +2722,12 @@ def generate_html(info, lang="fr"):
             
             
             // Settings panel toggle
-            document.addEventListener('DOMContentLoaded', function() {{
+            document.addEventListener('DOMContentLoaded', async function() {{
                 loadSettings();
+                
+                // Load theme icons before starting updates
+                await loadThemeIcons(settings.theme || 'ember');
+                
                 startRefreshCycle();
                 
                 
