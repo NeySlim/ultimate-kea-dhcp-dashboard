@@ -40,9 +40,23 @@ A modern, real-time web dashboard for monitoring ISC Kea DHCP server leases, poo
 
 ## Quick Installation
 
+### Method 1: Self-Extracting Installer (Recommended)
+
+Download and run the single self-contained installer:
+
+```bash
+# Download the installer
+curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/ultimate-kea-dashboard-installer.sh -o installer.sh
+
+# Run it
+sudo bash installer.sh
+```
+
+### Method 2: Clone and Install
+
 ```bash
 # Download and run the installer
-curl -sL https://github.com/NeySlim/ultimate-kea-dashboard/releases/latest/download/install.sh | sudo bash
+curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh | sudo bash
 ```
 
 ## Manual Installation
