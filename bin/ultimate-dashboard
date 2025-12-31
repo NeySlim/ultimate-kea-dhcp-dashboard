@@ -2352,12 +2352,12 @@ def generate_html(info, lang="fr"):
                     countdownEl.textContent = timeLeft + 's';
                 }}
                 
-                timeLeft--;
-                
                 // Trigger refresh when countdown reaches 0
-                if (timeLeft < 0) {{
-                    timeLeft = Math.floor(settings.refreshInterval / 1000);
+                if (timeLeft <= 0) {{
                     updateTables();
+                    timeLeft = Math.floor(settings.refreshInterval / 1000);
+                }} else {{
+                    timeLeft--;
                 }}
             }}
             
