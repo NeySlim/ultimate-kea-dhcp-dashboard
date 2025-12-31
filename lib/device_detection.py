@@ -157,8 +157,11 @@ def get_device_type(hostname, vendor, mac, device_info=None):
     if any(x in combined for x in ["raspi", "raspberry", "rpi", "pi", "jetson", "odroid", "beaglebone"]):
         return ("🍓", "Raspberry Pi")
     
-    # Servers & NAS
-    if any(x in combined for x in ["server", "nas", "synology", "qnap", "pfsense", "proxmox", "homelab", "unraid"]):
+    # Servers & NAS (check before generic "server" pattern)
+    if any(x in combined for x in ["proxmox", "esxi", "vmware", "vcenter", "hypervisor", "truenas", "freenas"]):
+        return ("🖥️", "Server")
+    
+    if any(x in combined for x in ["server", "nas", "synology", "qnap", "pfsense", "homelab", "unraid"]):
         return ("⚙️", "Server/NAS")
     
     # Smart TVs & Media Players
