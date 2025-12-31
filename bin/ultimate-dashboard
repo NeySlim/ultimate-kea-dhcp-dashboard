@@ -1856,7 +1856,7 @@ def generate_html(info, lang="fr"):
                 </tbody>
             </table>
             
-            <h2>{t['dhcp_clients']} ({len(info.get('leases', []))} {t['clients']})</h2>
+            <h2 id="dhcpClientsHeader">{t['dhcp_clients']} ({len(info.get('leases', []))} {t['clients']})</h2>
             <table id="leasesTable">
                 <thead>
                     <tr>
@@ -1877,7 +1877,7 @@ def generate_html(info, lang="fr"):
                 </tbody>
             </table>
             
-            <h2>{t['static_devices']} ({len(info.get('static_devices', []))} {t['devices']})</h2>
+            <h2 id="staticDevicesHeader">{t['static_devices']} ({len(info.get('static_devices', []))} {t['devices']})</h2>
             <table id="staticDevicesTable">
                 <thead>
                     <tr>
@@ -2354,8 +2354,10 @@ def generate_html(info, lang="fr"):
                 
                 timeLeft--;
                 
+                // Trigger refresh when countdown reaches 0
                 if (timeLeft < 0) {{
                     timeLeft = Math.floor(settings.refreshInterval / 1000);
+                    updateTables();
                 }}
             }}
             
@@ -2370,15 +2372,13 @@ def generate_html(info, lang="fr"):
                 updateCountdown();
                 
                 // Start countdown timer (every second)
+                // This will also trigger refresh when countdown hits 0
                 countdownTimer = setInterval(() => {{
                     updateCountdown();
                     updateScanCountdowns();
                 }}, 1000);
                 
-                // Start refresh timer
-                refreshTimer = setInterval(updateTables, settings.refreshInterval);
-                
-                console.log(`Refresh cycle started: ${{settings.refreshInterval}}ms`);
+                console.log(`Refresh cycle started: ${{settings.refreshInterval}}ms (${{Math.floor(settings.refreshInterval / 1000)}}s)`);
             }}
             
             // Apply saved sort to a table
@@ -2403,23 +2403,22 @@ def generate_html(info, lang="fr"):
                             timestampEl.textContent = `${{t('last_update')}}: ${{data.timestamp}}`;
                         }}
                         
-                        // Reset countdown
-                        timeLeft = Math.floor(settings.refreshInterval / 1000);
-                        
                         // Update all tables with data
                         updatePoolsTableFromData(data.pools);
                         updateLeasesTableFromData(data.leases);
                         updateStaticDevicesTableFromData(data.static_devices || []);
                         
                         // Update header counts
-                        const leasesHeader = document.querySelector('h2:nth-of-type(2)');
+                        const leasesHeader = document.getElementById('dhcpClientsHeader');
                         if (leasesHeader) {{
-                            leasesHeader.textContent = `${{data.leases.length}} ${{t('clients')}}`;
+                            const dhcpClientsLabel = leasesHeader.textContent.split('(')[0].trim();
+                            leasesHeader.textContent = `${{dhcpClientsLabel}} (${{data.leases.length}} ${{t('clients')}})`;
                         }}
                         
-                        const staticHeader = document.querySelector('h2:nth-of-type(3)');
+                        const staticHeader = document.getElementById('staticDevicesHeader');
                         if (staticHeader) {{
-                            staticHeader.textContent = `${{data.static_devices.length}} ${{t('devices')}}`;
+                            const staticDevicesLabel = staticHeader.textContent.split('(')[0].trim();
+                            staticHeader.textContent = `${{staticDevicesLabel}} (${{data.static_devices.length}} ${{t('devices')}})`;
                         }}
                     }})
                     .catch(err => console.log('Update error:', err));
