@@ -1271,16 +1271,12 @@ def generate_html(info, lang="fr"):
         
         services_col = f"<ul style='margin:0;padding-left:20px;'>{services_html}</ul>" if services_html else f"<em class='no-service'>{t['no_service']}</em>"
         
-        # Check if custom SVG icon exists
-        custom_svg = get_custom_icon_svg(lease.get('hostname', ''))
-        if custom_svg:
-            icon_display = custom_svg
-        else:
-            icon_display = device_icon
+        # Get icon name for SVG replacement
+        icon_name = lease.get("icon_name", "unknown")
         
         leases_html += f"""
         <tr class="{state_class}">
-            <td style="font-size: 1.3em; text-align: center;" title="{device_type}">{icon_display}</td>
+            <td style="font-size: 1.3em; text-align: center;" title="{device_type}" class="device-icon-cell" data-icon-name="{icon_name}"><span class="emoji-fallback" style="display:none;">{device_icon}</span></td>
             <td>{escape(ip)}</td>
             <td>{hostname}</td>
             <td>{escape(lease.get('hw_address', 'N/A'))}</td>
@@ -1365,9 +1361,12 @@ def generate_html(info, lang="fr"):
         
         services_col = f"<ul style='margin:0;padding-left:20px;'>{services_html}</ul>" if services_html else f"<em class='no-service'>{t['no_service']}</em>"
         
+        # Get icon name for SVG replacement
+        icon_name = device.get("icon_name", "unknown")
+        
         static_devices_html += f"""
         <tr>
-            <td style="font-size: 1.3em; text-align: center;" title="{device_type}">{device_icon}</td>
+            <td style="font-size: 1.3em; text-align: center;" title="{device_type}" class="device-icon-cell" data-icon-name="{icon_name}"><span class="emoji-fallback" style="display:none;">{device_icon}</span></td>
             <td>{type_badge}</td>
             <td>{escape(ip)}</td>
             <td>{hostname}</td>
@@ -2003,6 +2002,24 @@ def generate_html(info, lang="fr"):
                 }}
                 // Fallback to null (will use emoji)
                 return null;
+            }}
+            
+            // Replace all emoji icons with SVG icons on page load
+            function replaceAllIconsWithSVG() {{
+                const iconCells = document.querySelectorAll('.device-icon-cell[data-icon-name]');
+                iconCells.forEach(cell => {{
+                    const iconName = cell.getAttribute('data-icon-name');
+                    const svgIcon = getDeviceIconSVG(iconName);
+                    if (svgIcon) {{
+                        cell.innerHTML = svgIcon;
+                    }} else {{
+                        // Show emoji fallback if SVG not available
+                        const fallback = cell.querySelector('.emoji-fallback');
+                        if (fallback) {{
+                            fallback.style.display = 'inline';
+                        }}
+                    }}
+                }});
             }}
 
             
@@ -2727,6 +2744,9 @@ def generate_html(info, lang="fr"):
                 
                 // Load theme icons before starting updates
                 await loadThemeIcons(settings.theme || 'ember');
+                
+                // Replace all emoji icons with SVG immediately
+                replaceAllIconsWithSVG();
                 
                 startRefreshCycle();
                 
