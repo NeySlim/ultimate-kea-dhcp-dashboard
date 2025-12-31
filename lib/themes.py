@@ -42,6 +42,62 @@ THEMES = {
         "accent_primary": "#88c0d0",
         "accent_secondary": "#81a1c1",
         "scrollbar": "#4c566a"
+    },
+    "twilight": {
+        "bg_primary": "#1e1e2e",
+        "bg_secondary": "#313244",
+        "text_primary": "#cdd6f4",
+        "text_secondary": "#bac2de",
+        "border": "#45475a",
+        "success": "#a6e3a1",
+        "info": "#89b4fa",
+        "warning": "#f9e2af",
+        "error": "#f38ba8",
+        "accent_primary": "#cba6f7",
+        "accent_secondary": "#b4befe",
+        "scrollbar": "#45475a"
+    },
+    "blossom": {
+        "bg_primary": "#fdf6e3",
+        "bg_secondary": "#eee8d5",
+        "text_primary": "#586e75",
+        "text_secondary": "#657b83",
+        "border": "#93a1a1",
+        "success": "#859900",
+        "info": "#268bd2",
+        "warning": "#b58900",
+        "error": "#dc322f",
+        "accent_primary": "#d33682",
+        "accent_secondary": "#6c71c4",
+        "scrollbar": "#93a1a1"
+    },
+    "clarity": {
+        "bg_primary": "#ffffff",
+        "bg_secondary": "#f5f5f5",
+        "text_primary": "#212121",
+        "text_secondary": "#757575",
+        "border": "#e0e0e0",
+        "success": "#4caf50",
+        "info": "#2196f3",
+        "warning": "#ff9800",
+        "error": "#f44336",
+        "accent_primary": "#9c27b0",
+        "accent_secondary": "#673ab7",
+        "scrollbar": "#bdbdbd"
+    },
+    "pulse": {
+        "bg_primary": "#0d1117",
+        "bg_secondary": "#161b22",
+        "text_primary": "#c9d1d9",
+        "text_secondary": "#8b949e",
+        "border": "#30363d",
+        "success": "#238636",
+        "info": "#58a6ff",
+        "warning": "#d29922",
+        "error": "#f85149",
+        "accent_primary": "#1f6feb",
+        "accent_secondary": "#388bfd",
+        "scrollbar": "#30363d"
     }
 }
 
