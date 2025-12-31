@@ -7,31 +7,35 @@ A modern, real-time web dashboard for monitoring ISC Kea DHCP server leases, poo
 ## Features
 
 ### DHCP Monitoring
-- Real-time DHCP lease tracking
+- Real-time DHCP lease tracking via Kea control socket
+- Automatic pool and subnet configuration retrieval from Kea
 - Pool utilization visualization
 - Reserved IP management
-- MAC address vendor identification
+- MAC address vendor identification (IEEE OUI database)
 - Automatic hostname resolution
 
-### Network Scanning
+### Network Scanning & Discovery
 - Active device discovery within and outside DHCP pools
-- Multi-threaded network scanning for fast results
-- Service detection (HTTP/HTTPS)
-- Device type identification
-- Individual and global scan control
+- Multi-threaded network scanning for fast results (configurable thread pool)
+- Comprehensive service detection (SSH, HTTP/HTTPS, SNMP, and more)
+- Advanced device type identification with custom SVG icons
+- Individual device and global scan control
+- Real-time scan status monitoring
 
 ### System Metrics
 - Real-time CPU, RAM, Network, and Disk usage
 - Responsive gauge visualization
 - Theme-aware color schemes
 - Per-core CPU monitoring
+- Live metrics updates (1-second refresh)
 
 ### Modern UI
-- Multiple professional themes (Blossom, Sunset, Ocean, Forest, Night)
-- Responsive design
-- Real-time auto-refresh
-- Pause/resume functionality
-- Clean, intuitive interface
+- 6 professional themes (Ember, Twilight, Frost, Blossom, Clarity, Pulse)
+- Custom SVG icon system with theme-aware colors
+- Responsive design optimized for all screen sizes
+- Real-time data updates without page reload
+- Multi-language support (English, French, Spanish, German, Thai)
+- Clean, intuitive interface with professional aesthetics
 
 ## Requirements
 
@@ -101,17 +105,20 @@ Edit `/etc/ultimate-dashboard/ultimate-dashboard.conf`:
 port = 8089
 ssl_enabled = true
 
-# Kea paths
-# The dashboard automatically retrieves subnet and pool information from Kea via the control socket
+# Kea integration (simplified - no manual subnet/pool configuration needed!)
 kea_config = /etc/kea/kea-dhcp4.conf
-kea_leases = /var/lib/kea/kea-leases4.csv  # Used as fallback if socket unavailable
+kea_socket = /run/kea/kea4-ctrl-socket
 
 # Scanning
 scan_threads = 50
 scan_timeout = 0.5
 ```
 
-**Note:** Subnet and pool information is automatically retrieved from Kea DHCP configuration via the control socket (`/run/kea/kea4-ctrl-socket`). No manual network configuration required.
+**Key Improvements:**
+- **Automatic Configuration**: Subnet, pool, and DHCP range information is automatically retrieved from Kea via the control socket
+- **No Manual Network Config**: No need to manually specify subnets or DHCP ranges
+- **Socket-First Architecture**: Uses Kea control socket for real-time data, lease file only as fallback
+- **Simplified Setup**: Just point to your Kea config and socket, and you're ready to go!
 
 ## Screenshots
 
@@ -120,13 +127,14 @@ The dashboard provides a comprehensive view of your DHCP infrastructure:
 ![Dashboard Screenshot](docs/images/dashboard-screenshot.png)
 
 Features shown:
-- **Real-time system metrics**: CPU per-core, RAM, Network, and Disk usage gauges
+- **Real-time System Metrics**: CPU per-core, RAM, Network, and Disk usage with animated gauges
 - **DHCP Pools**: Automatic detection from Kea configuration with subnet and DNS domain info
-- **Active Leases**: Live DHCP clients with hostname resolution, MAC vendor lookup, and service detection
-- **Static Devices & Reservations**: Network devices outside DHCP pools and DHCP reservations
-- **Service Discovery**: Automatic detection of running services (SSH, HTTP, HTTPS, etc.)
-- **Theme Support**: Multiple professional color schemes
-- **Multi-language**: French, English, Spanish, German, Thai
+- **Active DHCP Leases**: Live clients with custom device-type icons, hostname resolution, MAC vendor lookup, and comprehensive service detection
+- **Static Devices & Reservations**: Network devices outside DHCP pools and DHCP reservations tracked separately
+- **Advanced Service Discovery**: Automatic detection of SSH, HTTP, HTTPS, SNMP, and more with service-specific icons
+- **Theme Support**: 6 professional color schemes with theme-aware SVG icons
+- **Multi-language**: French, English, Spanish, German, Thai with complete translation coverage
+- **Real-time Updates**: All data refreshes automatically without page reload (1s refresh for metrics, configurable for scans)
 
 ## Usage
 

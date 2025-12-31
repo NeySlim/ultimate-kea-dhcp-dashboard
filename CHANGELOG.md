@@ -1,6 +1,49 @@
 # Changelog
 
-## [2024-12-31] - Code Professionalization
+## [1.1.0] - 2025-12-31 - Major Feature & UX Enhancements
+
+### Configuration Simplification
+- **REMOVED**: Manual subnet and DHCP range configuration requirements
+- **ADDED**: Automatic subnet and pool retrieval directly from Kea via control socket
+- **IMPROVED**: Socket-first architecture - lease file now used only as fallback
+- **SIMPLIFIED**: Configuration file significantly reduced - just point to Kea config and socket
+
+### UI/UX Improvements
+- **ADDED**: Custom SVG icon system replacing emoji for device types
+  - Created 11 device-type icons (server, desktop, laptop, mobile, tablet, IoT, printer, camera, router, TV, unknown)
+  - Created 5 service icons (SSH, HTTP, HTTPS, SNMP, generic)
+  - All icons are theme-aware and adapt to current color scheme
+  - Proper sizing and stroke width for professional appearance
+- **ADDED**: 6 professional theme variants (Ember, Twilight, Frost, Blossom, Clarity, Pulse)
+- **FIXED**: Emoji flash on initial page load - SVG icons now display immediately
+- **IMPROVED**: Icon rendering with proper fallback system
+- **OPTIMIZED**: Service display formatting with icon badges
+
+### Performance & Refresh System
+- **REMOVED**: Global page refresh setting (caused data inconsistency)
+- **FIXED**: Refresh synchronization issues between different components
+- **IMPROVED**: Table-based API refresh instead of full page reload
+- **STANDARDIZED**: 1-second refresh rate for all real-time data
+- **FIXED**: Countdown timer now properly synchronized with actual data refresh
+
+### Translation & Localization
+- **FIXED**: Missing translations for "No service" / "Aucun service"
+- **IMPROVED**: Complete translation coverage across all UI elements
+- **VERIFIED**: All 5 languages (EN, FR, ES, DE, TH) properly implemented
+
+### Documentation
+- **ADDED**: Professional anonymized dashboard screenshot
+- **UPDATED**: README with new features and simplified configuration
+- **IMPROVED**: Feature descriptions to reflect actual capabilities
+- **ADDED**: Architecture explanations for socket-based retrieval
+
+### Technical Improvements
+- **REFACTORED**: Icon rendering system for consistency
+- **OPTIMIZED**: Data refresh logic for better performance
+- **REMOVED**: Redundant refresh configuration options
+- **IMPROVED**: Error handling for icon fallbacks
+
+## [1.0.0] - 2024-12-31 - Code Professionalization
 
 ### Security
 - **BREAKING**: Anonymized default credentials in configuration files
