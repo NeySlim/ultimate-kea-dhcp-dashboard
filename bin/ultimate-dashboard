@@ -1013,8 +1013,8 @@ def enrich_single_lease(lease):
         vendor = get_mac_vendor(hw_address)
         lease["vendor"] = vendor
         
-        # Get device type
-        device_icon, device_type = get_device_type(hostname, vendor, hw_address, ip)
+        # Get device type (don't pass ip as device_info, pass None)
+        device_icon, device_type = get_device_type(hostname, vendor, hw_address, None)
         lease["device_icon"] = device_icon
         lease["device_type"] = device_type
     except Exception as e:
@@ -2572,10 +2572,10 @@ def generate_html(info, lang="fr"):
                         scanStatus = '<span title="Jamais scanné" class="scan-icon">❌</span>';
                     }}
                     
-                    // Use pre-formatted services HTML from server
+                    // Use pre-formatted services HTML from server (already includes <li> tags)
                     let servicesCol = '';
                     if (lease.services_html && lease.services_html.length > 0) {{
-                        const servicesItems = lease.services_html.join('');
+                        const servicesItems = lease.services_html.join('');  // Already have <li> tags
                         servicesCol = `<ul style="margin:0;padding-left:20px;">${{servicesItems}}</ul>`;
                     }} else {{
                         servicesCol = `<em class="no-service">${{t('no_service')}}</em>`;
