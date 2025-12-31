@@ -2382,22 +2382,37 @@ def generate_html(info, lang="fr"):
             
             // Update tables with AJAX
             function updateTables() {{
-                fetch('/api/data')
-                    .then(response => response.json())
-                    .then(data => {{
+                // Fetch full page once with language parameter to get server-rendered content
+                const url = `/?lang=${{settings.lang}}`;
+                fetch(url)
+                    .then(response => response.text())
+                    .then(html => {{
+                        const parser = new DOMParser();
+                        const newDoc = parser.parseFromString(html, 'text/html');
+                        
                         // Update timestamp
                         const timestampEl = document.querySelector('.timestamp');
-                        if (timestampEl) {{
-                            timestampEl.textContent = `${{t('last_update')}}: ${{data.timestamp}}`;
+                        const newTimestamp = newDoc.querySelector('.timestamp');
+                        if (timestampEl && newTimestamp) {{
+                            timestampEl.textContent = newTimestamp.textContent;
                         }}
                         
                         // Reset countdown
                         timeLeft = Math.floor(settings.refreshInterval / 1000);
                         
-                        // Update tables but preserve sort
-                        updatePoolsTable(data.pools);
-                        updateLeasesTable(data.leases);
-                        updateStaticDevicesTable(data.static_devices || []);
+                        // Update all tables from the same fetched page
+                        updatePoolsTableFromDoc(newDoc);
+                        updateLeasesTableFromDoc(newDoc);
+                        updateStaticDevicesTableFromDoc(newDoc);
+                        
+                        // Update header counts
+                        const allOldHeaders = document.querySelectorAll('h2');
+                        const allNewHeaders = newDoc.querySelectorAll('h2');
+                        allOldHeaders.forEach((h, idx) => {{
+                            if (allNewHeaders[idx]) {{
+                                h.textContent = allNewHeaders[idx].textContent;
+                            }}
+                        }});
                     }})
                     .catch(err => console.log('Update error:', err));
             }}
@@ -2434,91 +2449,59 @@ def generate_html(info, lang="fr"):
                 updateScanCountdowns();
             }}
             
-            function updatePoolsTable(pools) {{
+            function updatePoolsTableFromDoc(newDoc) {{
                 const tbody = document.querySelector('#poolsTable tbody');
                 if (!tbody) return;
                 
-                let html = '';
-                if (pools.length === 0) {{
-                    html = `<tr><td colspan="3">No pools found</td></tr>`;
-                }} else {{
-                    pools.forEach(pool => {{
-                        html += `<tr>
-                            <td>${{pool.pool || ''}}</td>
-                            <td>${{pool.subnet || ''}}</td>
-                            <td>${{pool.dns_domain || 'N/A'}}</td>
-                        </tr>`;
-                    }});
+                const newTable = newDoc.getElementById('poolsTable');
+                if (newTable) {{
+                    tbody.innerHTML = newTable.querySelector('tbody').innerHTML;
+                    applySavedSort('poolsTable');
                 }}
-                
-                tbody.innerHTML = html;
-                applySavedSort('poolsTable');
             }}
             
-            function updateLeasesTable(leases) {{
+            function updateLeasesTableFromDoc(newDoc) {{
                 const tbody = document.querySelector('#leasesTable tbody');
                 if (!tbody) return;
                 
-                // Update via full page method to keep server-side rendering (SVG icons, services)
-                // Pass language parameter from settings
-                const url = `/?lang=${{settings.lang}}`;
-                fetch(url)
-                    .then(response => response.text())
-                    .then(html => {{
-                        const parser = new DOMParser();
-                        const newDoc = parser.parseFromString(html, 'text/html');
-                        
-                        const newTable = newDoc.getElementById('leasesTable');
-                        if (newTable) {{
-                            tbody.innerHTML = newTable.querySelector('tbody').innerHTML;
-                            applySavedSort('leasesTable');
-                            
-                            // Restore individual pause states after refresh
-                            restoreIndividualPauseStates();
-                        }}
-                        
-                        // Update header count
-                        const allOldHeaders = document.querySelectorAll('h2');
-                        const allNewHeaders = newDoc.querySelectorAll('h2');
-                        allOldHeaders.forEach((h, idx) => {{
-                            if (allNewHeaders[idx]) {{
-                                h.textContent = allNewHeaders[idx].textContent;
-                            }}
-                        }});
-                    }});
+                const newTable = newDoc.getElementById('leasesTable');
+                if (newTable) {{
+                    tbody.innerHTML = newTable.querySelector('tbody').innerHTML;
+                    applySavedSort('leasesTable');
+                    
+                    // Restore individual pause states after refresh
+                    restoreIndividualPauseStates();
+                }}
             }}
             
-            function updateStaticDevicesTable(staticDevices) {{
+            function updateStaticDevicesTableFromDoc(newDoc) {{
                 const tbody = document.querySelector('#staticDevicesTable tbody');
                 if (!tbody) return;
                 
-                // Update via full page method to keep server-side rendering (SVG icons, services)
-                // Pass language parameter from settings
-                const url = `/?lang=${{settings.lang}}`;
-                fetch(url)
-                    .then(response => response.text())
-                    .then(html => {{
-                        const parser = new DOMParser();
-                        const newDoc = parser.parseFromString(html, 'text/html');
-                        
-                        const newTable = newDoc.getElementById('staticDevicesTable');
-                        if (newTable) {{
-                            tbody.innerHTML = newTable.querySelector('tbody').innerHTML;
-                            applySavedSort('staticDevicesTable');
-                            
-                            // Restore individual pause states after refresh
-                            restoreIndividualPauseStates();
-                        }}
-                        
-                        // Update header count
-                        const allOldHeaders = document.querySelectorAll('h2');
-                        const allNewHeaders = newDoc.querySelectorAll('h2');
-                        allOldHeaders.forEach((h, idx) => {{
-                            if (allNewHeaders[idx]) {{
-                                h.textContent = allNewHeaders[idx].textContent;
-                            }}
-                        }});
-                    }});
+                const newTable = newDoc.getElementById('staticDevicesTable');
+                if (newTable) {{
+                    tbody.innerHTML = newTable.querySelector('tbody').innerHTML;
+                    applySavedSort('staticDevicesTable');
+                    
+                    // Restore individual pause states after refresh
+                    restoreIndividualPauseStates();
+                }}
+            }}
+            
+            // Legacy functions kept for compatibility (now just wrappers)
+            function updatePoolsTable(pools) {{
+                // Trigger full refresh to maintain consistency
+                updateTables();
+            }}
+            
+            function updateLeasesTable(leases) {{
+                // Trigger full refresh to maintain consistency
+                updateTables();
+            }}
+            
+            function updateStaticDevicesTable(staticDevices) {{
+                // Trigger full refresh to maintain consistency
+                updateTables();
             }}
             
             // Settings panel toggle
