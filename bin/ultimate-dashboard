@@ -1065,6 +1065,9 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 ip = lease['ip_address']
                 lease_copy = lease.copy()
                 
+                # device_icon is already set by get_dhcp_info_cached()
+                # No need to regenerate it here
+                
                 # Get scan data
                 with CACHE_LOCK:
                     services = NETWORK_SCAN_RESULTS.get(ip, [])
@@ -1095,6 +1098,9 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
             for device in info.get('static_devices', []):
                 ip = device['ip_address']
                 device_copy = device.copy()
+                
+                # device_icon is already set by get_dhcp_info_cached()
+                # No need to regenerate it here
                 
                 # Get enhanced data from scanner
                 with CACHE_LOCK:
