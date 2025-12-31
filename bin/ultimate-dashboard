@@ -1732,10 +1732,6 @@ def generate_html(info, lang="fr"):
                         <p style="display: flex; align-items: center; gap: 15px;">
                             <button id="pauseScanBtn" title="Mettre en pause le scan"><span class="pause-icon">⏸️</span></button>
                             <span class="scan-status scanning" id="scanStatus">Scan réseau actif</span>
-                            <span id="refreshCounter">
-                                <svg id="refreshIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="animation: spin 4s linear infinite;"><path d="M12 2C12 2 12 6 12 6M12 22C12 22 12 18 12 18M22 12C22 12 18 12 18 12M2 12C2 12 6 12 6 12M19.07 4.93C19.07 4.93 16.24 7.76 16.24 7.76M4.93 19.07C4.93 19.07 7.76 16.24 7.76 16.24M19.07 19.07C19.07 19.07 16.24 16.24 16.24 16.24M4.93 4.93C4.93 4.93 7.76 7.76 7.76 7.76" stroke="#88c0d0" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="3" fill="#88c0d0"/></svg>
-                                <span id="countdown">5s</span>
-                            </span>
                             <button id="settingsBtn">⚙️ {t['settings']}</button>
                         </p>
                     </div>
@@ -1817,17 +1813,6 @@ def generate_html(info, lang="fr"):
                     <button id="closeSettings">✕</button>
                 </h3>
                 <div style="margin: 15px 0;">
-                    <label>
-                        🔄 {t['refresh_speed']}:
-                    </label>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="refresh-option" data-interval="1000">1s</button>
-                        <button class="refresh-option" data-interval="5000">5s</button>
-                        <button class="refresh-option" data-interval="10000">10s</button>
-                        <button class="refresh-option" data-interval="30000">30s</button>
-                    </div>
-                </div>
-                <div style="margin: 15px 0; padding-top: 15px; border-top: 1px solid #4c566a;">
                     <label>
                         🎨 {t['theme']}:
                     </label>
@@ -1925,9 +1910,10 @@ def generate_html(info, lang="fr"):
         
         <script src="/static/js/gauges.js"></script>
         <script>
-            // Settings and state management
+            // Settings and state management (refresh fixed at 1s)
+            const REFRESH_INTERVAL = 1000; // Fixed 1 second refresh
+            
             let settings = {{
-                refreshInterval: 5000,
                 theme: 'ember',
                 lang: '{lang}',
                 scanEnabled: true,  // Scan enabled by default
@@ -2006,8 +1992,6 @@ def generate_html(info, lang="fr"):
             }}
             
             let refreshTimer = null;
-            let countdownTimer = null;
-            let timeLeft = 5;
             let pausedIPs = new Set();
             let scanPaused = false;
             
@@ -2308,7 +2292,6 @@ def generate_html(info, lang="fr"):
                     return;
                 }}
                 
-                updateRefreshIntervalUI();
                 updateThemeUI();
                 updateLangUI();
                 applyTheme(settings.theme || 'ember');
@@ -2353,57 +2336,19 @@ def generate_html(info, lang="fr"):
             }}
             
             // Update UI to reflect current refresh interval
-            function updateRefreshIntervalUI() {{
-                document.querySelectorAll('.refresh-option').forEach(btn => {{
-                    const interval = parseInt(btn.dataset.interval);
-                    if (interval === settings.refreshInterval) {{
-                        btn.style.background = 'linear-gradient(135deg, #d08770, #ebcb8b)';
-                        btn.style.borderColor = '#ebcb8b';
-                        btn.style.color = '#1a1515';
-                    }} else {{
-                        btn.style.background = '#3b4252';
-                        btn.style.borderColor = '#4c566a';
-                        btn.style.color = '#d8dee9';
-                    }}
-                }});
-            }}
             
-            // Countdown display with animated icon
-            function updateCountdown() {{
-                const countdownEl = document.getElementById('countdown');
-                
-                // Update countdown text
-                if (countdownEl) {{
-                    countdownEl.textContent = timeLeft + 's';
-                }}
-                
-                // Trigger refresh when countdown reaches 0
-                if (timeLeft <= 0) {{
-                    updateTables();
-                    timeLeft = Math.floor(settings.refreshInterval / 1000);
-                }} else {{
-                    timeLeft--;
-                }}
-            }}
-            
-            // Start refresh cycle
+            // Start refresh cycle (fixed 1s interval)
             function startRefreshCycle() {{
-                // Clear existing timers
+                // Clear existing timer
                 if (refreshTimer) clearInterval(refreshTimer);
-                if (countdownTimer) clearInterval(countdownTimer);
                 
-                // Reset countdown
-                timeLeft = Math.floor(settings.refreshInterval / 1000);
-                updateCountdown();
-                
-                // Start countdown timer (every second)
-                // This will also trigger refresh when countdown hits 0
-                countdownTimer = setInterval(() => {{
-                    updateCountdown();
+                // Start refresh timer at 1 second
+                refreshTimer = setInterval(() => {{
+                    updateTables();
                     updateScanCountdowns();
-                }}, 1000);
+                }}, REFRESH_INTERVAL);
                 
-                console.log(`Refresh cycle started: ${{settings.refreshInterval}}ms (${{Math.floor(settings.refreshInterval / 1000)}}s)`);
+                console.log(`Refresh cycle started: ${{REFRESH_INTERVAL}}ms (1s fixed)`);
             }}
             
             // Apply saved sort to a table
@@ -2813,16 +2758,6 @@ def generate_html(info, lang="fr"):
                         settingsPanel.style.display = 'none';
                     }});
                 }}
-                
-                // Refresh interval buttons
-                document.querySelectorAll('.refresh-option').forEach(btn => {{
-                    btn.addEventListener('click', () => {{
-                        settings.refreshInterval = parseInt(btn.dataset.interval);
-                        saveSettings();
-                        updateRefreshIntervalUI();
-                        startRefreshCycle();
-                    }});
-                }});
                 
                 // Theme selection buttons
                 document.querySelectorAll('.theme-option').forEach(btn => {{
