@@ -563,8 +563,9 @@ def get_non_pool_ips_and_reservations():
                 )
                 if result.returncode == 0:
                     for line in result.stdout.split('\n'):
-                        # Skip incomplete ARP entries
-                        if 'INCOMPLETE' in line.upper() or 'incomplete' in line:
+                        # Skip incomplete/failed ARP entries
+                        line_upper = line.upper()
+                        if 'INCOMPLETE' in line_upper or 'FAILED' in line_upper:
                             continue
                         
                         parts = line.split()
