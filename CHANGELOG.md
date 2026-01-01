@@ -1,5 +1,49 @@
 # Changelog
 
+## [1.2.2] - 2026-01-01 - Custom Device Configuration System
+
+### Custom Device Features
+- **ADDED**: User-configurable custom devices via JSON configuration
+  - `etc/custom-devices.json`: Configuration file for custom devices
+  - `lib/custom_devices.py`: Module for custom device management (10.5 KB)
+  - Simple JSON format for easy customization
+- **ADDED**: Priority-based device detection (custom devices checked FIRST)
+- **ADDED**: Modular and extensible architecture
+- **ADDED**: Hot-reload support (restart dashboard to apply changes)
+
+### Gaming PC Icon Themes
+- **ADDED**: 3 beautiful SVG icon themes for gaming PCs
+  - `master`: High-end setup with large curved monitor + RGB lighting + crown badge
+  - `apprentice`: Compact mini PC with small monitor + animated RGB fan + level indicator
+  - `generic`: Standard gaming tower PC with dual RGB fans
+- **ADDED**: Animated SVG elements (pulsing LEDs, rotating fans)
+- **ADDED**: Personalized labels and descriptions per device
+
+### Documentation
+- **ADDED**: Complete user guide `docs/CUSTOM-DEVICES.md`
+  - Configuration file structure and parameters
+  - Multiple examples (Gaming PC, Server, Smart Home)
+  - Icon themes documentation
+  - Hostname matching rules
+  - Validation and troubleshooting guide
+
+### Bug Fixes
+- **FIXED**: Gaming PCs (marvin, shepard) incorrectly detected as routers
+- **FIXED**: Device detection priority (custom devices now have highest priority)
+- **FIXED**: Import compatibility (absolute imports for production)
+
+### Technical
+- **CHANGED**: `lib/device_detection.py` - Integrated custom_devices module
+- **TESTED**: Production deployment verified on Debian 13
+- **MAINTAINED**: Full backward compatibility (no breaking changes)
+
+### Benefits
+- ✅ No code modification needed for custom devices
+- ✅ Simple JSON editing
+- ✅ Beautiful personalized icons
+- ✅ Extensible design
+- ✅ Well-documented
+
 ## [1.2.1] - 2026-01-01 - Code Refactoring & Bilingual Documentation
 
 ### Code Structure (Refactoring)
