@@ -1035,6 +1035,9 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                     is_scanning = SCAN_IN_PROGRESS.get(ip, False)
                     last_scan = LAST_SCAN_TIME.get(ip, 0)
                 
+                # Get custom icon HTML if available
+                custom_svg = get_custom_icon_svg(device_copy.get('hostname', ''))
+                
                 # Update with enhanced data if available
                 if enhanced.get('hostname') and device_copy.get('hostname') in ['N/A', None, '']:
                     device_copy['hostname'] = enhanced['hostname']
@@ -1055,6 +1058,7 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 device_copy['services_html'] = services_html
                 device_copy['is_scanning'] = is_scanning
                 device_copy['last_scan'] = last_scan
+                device_copy['icon_html'] = custom_svg if custom_svg else None
                 
                 static_devices.append(device_copy)
             
@@ -1196,12 +1200,17 @@ def generate_html(info, lang="fr"):
         
         services_col = f"<ul style='margin:0;padding-left:20px;'>{services_html}</ul>" if services_html else f"<em class='no-service'>{t['no_service']}</em>"
         
-        # Get icon name for SVG replacement
-        icon_name = lease.get("icon_name", "unknown")
+        # Get icon - use custom SVG if available, otherwise use icon_name for theme SVG
+        icon_html_custom = lease.get("icon_html")
+        if icon_html_custom:
+            icon_cell = f'<td style="font-size: 1.3em; text-align: center;" title="{device_type}" class="device-icon-cell">{icon_html_custom}</td>'
+        else:
+            icon_name = lease.get("icon_name", "unknown")
+            icon_cell = f'<td style="font-size: 1.3em; text-align: center;" title="{device_type}" class="device-icon-cell" data-icon-name="{icon_name}"><span class="emoji-fallback" style="display:none;">{device_icon}</span></td>'
         
         leases_html += f"""
         <tr class="{state_class}">
-            <td style="font-size: 1.3em; text-align: center;" title="{device_type}" class="device-icon-cell" data-icon-name="{icon_name}"><span class="emoji-fallback" style="display:none;">{device_icon}</span></td>
+            {icon_cell}
             <td>{escape(ip)}</td>
             <td>{hostname}</td>
             <td>{escape(lease.get('hw_address', 'N/A'))}</td>
@@ -1286,12 +1295,17 @@ def generate_html(info, lang="fr"):
         
         services_col = f"<ul style='margin:0;padding-left:20px;'>{services_html}</ul>" if services_html else f"<em class='no-service'>{t['no_service']}</em>"
         
-        # Get icon name for SVG replacement
-        icon_name = device.get("icon_name", "unknown")
+        # Get icon - use custom SVG if available, otherwise use icon_name for theme SVG
+        icon_html_custom = device.get("icon_html")
+        if icon_html_custom:
+            icon_cell = f'<td style="font-size: 1.3em; text-align: center;" title="{device_type}" class="device-icon-cell">{icon_html_custom}</td>'
+        else:
+            icon_name = device.get("icon_name", "unknown")
+            icon_cell = f'<td style="font-size: 1.3em; text-align: center;" title="{device_type}" class="device-icon-cell" data-icon-name="{icon_name}"><span class="emoji-fallback" style="display:none;">{device_icon}</span></td>'
         
         static_devices_html += f"""
         <tr>
-            <td style="font-size: 1.3em; text-align: center;" title="{device_type}" class="device-icon-cell" data-icon-name="{icon_name}"><span class="emoji-fallback" style="display:none;">{device_icon}</span></td>
+            {icon_cell}
             <td>{type_badge}</td>
             <td>{escape(ip)}</td>
             <td>{hostname}</td>
@@ -1958,6 +1972,10 @@ def generate_html(info, lang="fr"):
                     pause_scan: "Mettre en pause le scan",
                     scan_in_pause: "Scan en pause",
                     pause_resume_scan: "Pause/Resume scan",
+                    scan_in_progress: "Scan en cours",
+                    waiting_scan: "Attente scan",
+                    waiting_next_scan: "En attente",
+                    never_scanned: "Jamais scanné",
                     no_service: "Aucun service",
                     clients: "clients",
                     devices: "dispositifs",
@@ -1973,6 +1991,10 @@ def generate_html(info, lang="fr"):
                     pause_scan: "Pause scan",
                     scan_in_pause: "Scan paused",
                     pause_resume_scan: "Pause/Resume scan",
+                    scan_in_progress: "Scanning",
+                    waiting_scan: "Waiting",
+                    waiting_next_scan: "Waiting",
+                    never_scanned: "Never scanned",
                     no_service: "No service",
                     clients: "clients",
                     devices: "devices",
@@ -1987,7 +2009,11 @@ def generate_html(info, lang="fr"):
                     resume_scan: "Reanudar escaneo",
                     pause_scan: "Pausar escaneo",
                     scan_in_pause: "Escaneo en pausa",
-                    pause_resume_scan: "Pausar/Reanudar escaneo"
+                    pause_resume_scan: "Pausar/Reanudar escaneo",
+                    scan_in_progress: "Escaneando",
+                    waiting_scan: "Esperando",
+                    waiting_next_scan: "Esperando",
+                    never_scanned: "Nunca escaneado"
                 }},
                 de: {{
                     last_update: "Letzte Aktualisierung",
@@ -1996,7 +2022,11 @@ def generate_html(info, lang="fr"):
                     resume_scan: "Scan fortsetzen",
                     pause_scan: "Scan pausieren",
                     scan_in_pause: "Scan pausiert",
-                    pause_resume_scan: "Scan pausieren/fortsetzen"
+                    pause_resume_scan: "Scan pausieren/fortsetzen",
+                    scan_in_progress: "Scannen",
+                    waiting_scan: "Warten",
+                    waiting_next_scan: "Warten",
+                    never_scanned: "Nie gescannt"
                 }},
                 th: {{
                     last_update: "อัปเดตล่าสุด",
@@ -2005,7 +2035,11 @@ def generate_html(info, lang="fr"):
                     resume_scan: "ดำเนินการสแกนต่อ",
                     pause_scan: "หยุดสแกนชั่วคราว",
                     scan_in_pause: "สแกนหยุดชั่วคราว",
-                    pause_resume_scan: "หยุด/ดำเนินการสแกน"
+                    pause_resume_scan: "หยุด/ดำเนินการสแกน",
+                    scan_in_progress: "กำลังสแกน",
+                    waiting_scan: "รอ",
+                    waiting_next_scan: "รอ",
+                    never_scanned: "ไม่เคยสแกน"
                 }}
             }};
             
@@ -2562,14 +2596,14 @@ def generate_html(info, lang="fr"):
                     // Build scan status (DHCP Clients - JavaScript)
                     let scanStatus = '';
                     if (lease.is_scanning) {{
-                        scanStatus = '<span title="' + t('scan_in_progress') + '" class="scan-icon">🔍</span> <span class="scan-text">' + t('scan_in_progress') + '</span>';
+                        scanStatus = '<span title="' + t('scan_in_progress') + '" class="scan-icon">⚙️</span> <span class="scan-text">' + t('scan_in_progress') + '</span>';
                     }} else if (lease.last_scan > 0) {{
                         const timeSince = currentTime - Math.floor(lease.last_scan);
                         const nextIn = Math.max(0, 60 - timeSince);
                         if (nextIn > 0) {{
                             scanStatus = '<span title="' + t('waiting_scan') + '" class="scan-icon">⏱️</span> <span class="scan-countdown">' + nextIn + 's</span>';
                         }} else {{
-                            scanStatus = '<span title="' + t('waiting_scan') + '" class="scan-icon">⏱️</span> <span class="scan-text">' + t('waiting_scan') + '</span>';
+                            scanStatus = '<span title="' + t('waiting_next_scan') + '" class="scan-icon">⏳</span> <span class="scan-text">' + t('waiting_next_scan') + '</span>';
                         }}
                     }} else {{
                         scanStatus = '<span title="' + t('never_scanned') + '" class="scan-icon">⭕</span> <span class="scan-text">' + t('never_scanned') + '</span>';
@@ -2623,14 +2657,14 @@ def generate_html(info, lang="fr"):
                     // Build scan status (Static Devices - JavaScript)
                     let scanStatus = '';
                     if (device.is_scanning) {{
-                        scanStatus = '<span title="' + t('scan_in_progress') + '" class="scan-icon">🔍</span> <span class="scan-text">' + t('scan_in_progress') + '</span>';
+                        scanStatus = '<span title="' + t('scan_in_progress') + '" class="scan-icon">⚙️</span> <span class="scan-text">' + t('scan_in_progress') + '</span>';
                     }} else if (device.last_scan > 0) {{
                         const timeSince = currentTime - Math.floor(device.last_scan);
                         const nextIn = Math.max(0, 60 - timeSince);
                         if (nextIn > 0) {{
                             scanStatus = '<span title="' + t('waiting_scan') + '" class="scan-icon">⏱️</span> <span class="scan-countdown">' + nextIn + 's</span>';
                         }} else {{
-                            scanStatus = '<span title="' + t('waiting_scan') + '" class="scan-icon">⏱️</span> <span class="scan-text">' + t('waiting_scan') + '</span>';
+                            scanStatus = '<span title="' + t('waiting_next_scan') + '" class="scan-icon">⏳</span> <span class="scan-text">' + t('waiting_next_scan') + '</span>';
                         }}
                     }} else {{
                         scanStatus = '<span title="' + t('never_scanned') + '" class="scan-icon">⭕</span> <span class="scan-text">' + t('never_scanned') + '</span>';
