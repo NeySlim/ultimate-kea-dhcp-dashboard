@@ -1807,15 +1807,15 @@ def generate_html(info, lang="fr"):
             <table id="staticDevicesTable">
                 <thead>
                     <tr>
-                        <th>{t['type']}</th>
-                        <th>Catégorie</th>
-                        <th>{t['ip_address']}</th>
-                        <th>{t['hostname']}</th>
-                        <th>{t['mac_address']}</th>
-                        <th>{t['vendor']}</th>
-                        <th>{t['scan_status_col']}</th>
-                        <th>{t['services']}</th>
-                        <th>{t['subnet']}</th>
+                        <th style="cursor: pointer;">{t['type']}</th>
+                        <th style="cursor: pointer;">Catégorie</th>
+                        <th style="cursor: pointer;">{t['ip_address']}</th>
+                        <th style="cursor: pointer;">{t['hostname']}</th>
+                        <th style="cursor: pointer;">{t['mac_address']}</th>
+                        <th style="cursor: pointer;">{t['vendor']}</th>
+                        <th style="cursor: pointer;">{t['scan_status_col']}</th>
+                        <th style="cursor: pointer;">{t['services']}</th>
+                        <th style="cursor: pointer;">{t['subnet']}</th>
                     </tr>
                 </thead>
                 <tbody>
