@@ -879,6 +879,7 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 device_copy['is_scanning'] = is_scanning
                 device_copy['last_scan'] = last_scan
                 device_copy['icon_html'] = custom_svg if custom_svg else None
+                device_copy['snmp_info'] = enhanced.get('snmp_info')
                 
                 static_devices.append(device_copy)
             
@@ -2523,6 +2524,24 @@ def generate_html(info, lang="fr"):
                     }} else {{
                         servicesCol = `<em class="no-service">${{t('no_service')}}</em>`;
                     }}
+                    
+                    // Add SNMP info if available
+                    let snmpDisplay = '';
+                    if (device.snmp_info && device.snmp_info.available) {{
+                        const snmp = device.snmp_info;
+                        let snmpParts = [];
+                        if (snmp.sysName) snmpParts.push(`<strong>${{t('name')}}:</strong> ${{snmp.sysName}}`);
+                        if (snmp.sysDescr) snmpParts.push(`<strong>${{t('description')}}:</strong> ${{snmp.sysDescr}}`);
+                        if (snmp.sysLocation) snmpParts.push(`<strong>${{t('location')}}:</strong> ${{snmp.sysLocation}}`);
+                        if (snmp.sysUpTime) snmpParts.push(`<strong>${{t('uptime')}}:</strong> ${{snmp.sysUpTime}}`);
+                        if (snmpParts.length > 0) {{
+                            snmpDisplay = `<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(0,255,0,0.1); border-left:3px solid #28a745; font-size:0.85em;"><div style="margin-bottom:3px; font-weight:600;">📊 SNMP:</div>${{snmpParts.join('<br>')}}</div>`;
+                        }}
+                    }} else {{
+                        snmpDisplay = `<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(128,128,128,0.1); border-left:3px solid #888; font-size:0.85em; font-weight:600;">📊 SNMP?</div>`;
+                    }}
+                    
+                    scanStatus = scanStatus + snmpDisplay;
                     
                     html += `<tr>
                         <td style="font-size: 1.3em; text-align: center;" title="${{device.device_type || 'Unknown'}}">${{icon}}</td>

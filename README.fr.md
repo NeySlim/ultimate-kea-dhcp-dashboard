@@ -22,6 +22,8 @@ Un tableau de bord web moderne et temps-réel pour surveiller les baux ISC Kea D
 - Découverte active des périphériques dans et hors des pools DHCP
 - Scan réseau multi-threadé pour des résultats rapides (pool de threads configurable)
 - Détection complète des services (SSH, HTTP/HTTPS, SNMP, et plus)
+- **Découverte des informations système via SNMP** (sysDescr, sysContact, sysLocation, sysUpTime)
+- **Communautés SNMP configurables** pour une interrogation avancée des équipements
 - Identification avancée du type d'appareil avec icônes SVG personnalisées
 - Contrôle de scan individuel et global
 - Surveillance de l'état du scan en temps réel
@@ -160,6 +162,11 @@ kea_socket = /run/kea/kea4-ctrl-socket
 # Scan
 scan_threads = 50
 scan_timeout = 0.5
+
+# Découverte SNMP (optionnel)
+snmp_enabled = true
+snmp_communities = public,home
+snmp_timeout = 1
 ```
 
 **Améliorations Clés:**

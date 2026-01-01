@@ -22,6 +22,8 @@ A modern, real-time web dashboard for monitoring ISC Kea DHCP server leases, poo
 - Active device discovery within and outside DHCP pools
 - Multi-threaded network scanning for fast results (configurable thread pool)
 - Comprehensive service detection (SSH, HTTP/HTTPS, SNMP, and more)
+- **SNMP system information discovery** (sysDescr, sysContact, sysLocation, sysUpTime)
+- **Configurable SNMP communities** for enhanced device interrogation
 - Advanced device type identification with custom SVG icons
 - Individual device and global scan control
 - Real-time scan status monitoring
@@ -176,6 +178,11 @@ kea_socket = /run/kea/kea4-ctrl-socket
 # Scanning
 scan_threads = 50
 scan_timeout = 0.5
+
+# SNMP Discovery (optional)
+snmp_enabled = true
+snmp_communities = public,home
+snmp_timeout = 1
 ```
 
 **Key Improvements:**

@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.5.0] - 2026-01-01 - SNMP System Discovery
+
+### SNMP Features
+- **ADDED**: SNMP system information discovery for network devices
+  - Automatic collection of sysDescr, sysContact, sysLocation, sysUpTime
+  - Real-time display in dashboard status column
+  - "SNMP?" indicator when SNMP is enabled but no data yet
+  - "SNMP:" with full system info when data is available
+- **ADDED**: Configurable SNMP communities support
+  - Multiple communities can be specified (comma-separated)
+  - Communities tried in order until one succeeds
+  - Example: `snmp_communities = public,home,private`
+- **ADDED**: Enhanced configuration file parsing
+  - Support for both `[DEFAULT]` and `[server]` sections
+  - Automatic comma-separated list parsing
+  - Better error handling and logging
+
+### Configuration Improvements
+- **IMPROVED**: Config loading now supports list-type parameters
+- **ADDED**: Startup logging for SNMP communities configuration
+- **ADDED**: Debug logging for SNMP data collection
+
+### Bug Fixes
+- **FIXED**: Missing `is_static` variable in static devices display
+- **FIXED**: Config file section detection (DEFAULT vs server)
+- **FIXED**: SNMP display not showing for static devices
+
+### Documentation
+- **UPDATED**: README with SNMP configuration examples
+- **UPDATED**: Configuration file example with SNMP settings
+- **UPDATED**: French and English documentation
+
 ## [1.2.2] - 2026-01-01 - Custom Device Configuration System
 
 ### Custom Device Features
