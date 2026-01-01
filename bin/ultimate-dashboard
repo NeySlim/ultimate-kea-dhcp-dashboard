@@ -90,11 +90,11 @@ def load_config():
             break
     
     if not config_file:
-        print(f"Warning: No config file found in {CONFIG_PATHS}")
-        print("Using default configuration")
+        print(f"Warning: No config file found in {CONFIG_PATHS}", flush=True)
+        print("Using default configuration", flush=True)
         return
     
-    print(f"Loading configuration from {config_file}")
+    print(f"Loading configuration from {config_file}", flush=True)
     parser = configparser.ConfigParser()
     try:
         parser.read(config_file)
@@ -115,8 +115,12 @@ def load_config():
                             config[key] = [item.strip() for item in value.split(',')]
                         else:
                             config[key] = value
+        
+        # Log important settings
+        if config.get('enable_snmp'):
+            print(f"[CONFIG] SNMP enabled with communities: {config.get('snmp_communities', ['public'])}", flush=True)
     except Exception as e:
-        print(f"Error loading config: {e}")
+        print(f"Error loading config: {e}", flush=True)
 
 
 def resolve_hostname(ip):
@@ -314,7 +318,10 @@ def network_scanner_thread():
                                 SCAN_IN_PROGRESS[ip] = False
                             if data.get('alive'):
                                 snmp_str = " SNMP✓" if data.get('snmp_info') else ""
-                                print(f"[INFO] {ip}: hostname={data.get('hostname', 'N/A')}, MAC={data.get('mac', 'N/A')}, services={len(data.get('services', []))}{snmp_str}")
+                                print(f"[INFO] {ip}: hostname={data.get('hostname', 'N/A')}, MAC={data.get('mac', 'N/A')}, services={len(data.get('services', []))}{snmp_str}", flush=True)
+                                # Debug SNMP info
+                                if data.get('snmp_info'):
+                                    print(f"[DEBUG] {ip} SNMP data: {data.get('snmp_info')}", flush=True)
                         except Exception as e:
                             print(f"[WARN] {ip}: enhanced scan failed - {e}")
                             with CACHE_LOCK:
@@ -1046,6 +1053,7 @@ def generate_html(info, lang="fr"):
     for device in info.get("static_devices", []):
         ip = device['ip_address']
         device_cat = device.get("type", "static")
+        is_static = True  # This is a static device
         
         # Try to get enhanced data from scanner first
         with CACHE_LOCK:
