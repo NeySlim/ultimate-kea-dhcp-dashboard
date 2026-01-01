@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.2.1] - 2026-01-01 - Code Refactoring & Bilingual Documentation
+
+### Code Structure (Refactoring)
+- **ADDED**: Modular code structure with separate modules
+  - `lib/translations.py`: Multi-language translations (FR, EN, ES, DE, TH)
+  - `lib/config.py`: Configuration loading and management
+  - `lib/utils.py`: Utility functions (hostname resolution, formatting)
+- **IMPROVED**: Better code organization and maintainability
+- **IMPROVED**: Easier testing and module reusability
+- **PREPARED**: Foundation for further refactoring (HTML templates, Kea API)
+
+### Documentation
+- **ADDED**: Complete bilingual documentation (English/French)
+  - `README.fr.md`: Complete French translation of README
+  - `docs/README.md`: Bilingual documentation index
+  - `docs/LANGUAGE-INDEX.md`: Language navigation guide
+- **ADDED**: Language switchers on all documentation files
+- **IMPROVED**: Installation guides with bilingual headers
+  - `docs/INSTALL-FEDORA.md` (EN) + `docs/INSTALL-FEDORA.fr.md` (FR)
+  - `docs/INSTALL-ARCH.md` (EN) + `docs/INSTALL-ARCH.fr.md` (FR)
+- **ADDED**: Documentation structure extensible to other languages (ES, DE, IT, etc.)
+
+### Technical
+- **TESTED**: Production deployment verified and functional
+- **MAINTAINED**: Full backward compatibility
+- **STRUCTURE**: Clean separation of concerns (translations, config, utilities)
+
 ## [1.2.0] - 2026-01-01 - Multi-Distribution Support
 
 ### Distribution Support
