@@ -1081,7 +1081,8 @@ def generate_html(info, lang="fr"):
                 port = svc['port']
                 service = svc['service']
                 service_link = format_service_link(ip, port, service)
-                services_html += service_link  # service_link already includes <li> tags
+                if service_link:  # Skip if None (e.g., SNMP port 161)
+                    services_html += service_link  # service_link already includes <li> tags
         
         # Add SNMP info display if available - in services column
         snmp_info = lease.get('snmp_info')
@@ -1198,7 +1199,8 @@ def generate_html(info, lang="fr"):
                 port = svc['port']
                 service = svc['service']
                 service_link = format_service_link(ip, port, service)
-                services_html += service_link  # service_link already includes <li> tags
+                if service_link:  # Skip if None (e.g., SNMP port 161)
+                    services_html += service_link  # service_link already includes <li> tags
         
         # Add SNMP info display if available - in services column
         snmp_info = enhanced.get('snmp_info')
