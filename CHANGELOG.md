@@ -1,5 +1,59 @@
 # Changelog
 
+## [1.5.7] - 2026-01-01 - Multi-Distribution Packaging
+
+### New Features
+- **NEW**: Native package support for major Linux distributions
+  - Debian/Ubuntu (.deb packages)
+  - Red Hat/Fedora/CentOS/Rocky/Alma (.rpm packages)
+  - Arch Linux (.pkg.tar.zst packages)
+- **NEW**: Automated package building via GitHub Actions
+- **NEW**: All packages include Kea DHCP as dependency
+- **NEW**: Automatic service setup and user creation in packages
+- **NEW**: Automatic OUI database download on package installation
+
+### Improvements
+- **IMPROVED**: Installation process simplified with native packages
+- **IMPROVED**: Dependency management handled by package managers
+- **IMPROVED**: Systemd service automatically enabled on package install
+- **IMPROVED**: README updated with package installation instructions
+
+### Technical Details
+- Packaging files in `packaging/{debian,rpm,arch}/`
+- GitHub Actions workflow builds all packages on release tags
+- Pre-built packages available in GitHub releases
+- All packages create system user, install to /opt, setup logs
+- Package manager handles all dependencies automatically
+
+---
+
+## [1.5.6] - 2026-01-01 - Enhanced UI and Auto-Update
+
+### New Features
+- **NEW**: Automatic update checker with GitHub integration
+- **NEW**: One-click update button in dashboard header
+- **NEW**: Configurable refresh interval (1s, 2s, 5s, 10s, 30s)
+- **NEW**: Service discovery count badges with hover details
+- **NEW**: SNMP details in hover tooltips
+- **NEW**: Vicuna theme (OPNsense-inspired)
+
+### Improvements
+- **IMPROVED**: Vendor lookup using IEEE OUI database
+- **IMPROVED**: Automatic weekly OUI database updates
+- **IMPROVED**: Static devices show ARP data immediately
+- **IMPROVED**: Hover tooltips prevent flicker on table refresh
+- **IMPROVED**: Tooltips overflow table boundaries properly
+- **IMPROVED**: IP address sorting (numerical instead of alphabetical)
+
+### Bug Fixes
+- **FIXED**: Static devices table sorting not working
+- **FIXED**: MAC addresses not showing in static devices table
+- **FIXED**: ARP incomplete entries appearing in tables
+- **FIXED**: DHCP pool IPs appearing in static devices table
+- **FIXED**: Services breaking table cell height
+
+---
+
 ## [1.5.5] - 2026-01-01 - Static Devices Filtering
 
 ### Improvements

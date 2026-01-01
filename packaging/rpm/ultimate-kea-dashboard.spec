@@ -1,5 +1,5 @@
 Name:           ultimate-kea-dashboard
-Version:        1.5.6
+Version:        1.5.7
 Release:        1%{?dist}
 Summary:        Modern web dashboard for Kea DHCP Server
 
@@ -131,6 +131,13 @@ fi
 %dir %attr(0755,ultimate-kea-dashboard,ultimate-kea-dashboard) /var/log/ultimate-kea-dashboard
 
 %changelog
+* Wed Jan 01 2026 NeySlim <neyslim@example.com> - 1.5.7-1
+- New upstream release 1.5.7
+- Added native packaging for Debian/Ubuntu, Red Hat/Fedora, and Arch Linux
+- Automated package building via GitHub Actions
+- All packages include Kea DHCP server as dependency
+- Automatic service and user setup
+
 * Wed Jan 01 2026 NeySlim <neyslim@example.com> - 1.5.6-1
 - New upstream release 1.5.6
 - Added configurable refresh interval
