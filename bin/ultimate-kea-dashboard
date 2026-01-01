@@ -1813,15 +1813,15 @@ def generate_html(info, lang="fr"):
             <table id="staticDevicesTable">
                 <thead>
                     <tr>
-                        <th style="cursor: pointer;">{t['type']}</th>
-                        <th style="cursor: pointer;">Catégorie</th>
-                        <th style="cursor: pointer;">{t['ip_address']}</th>
-                        <th style="cursor: pointer;">{t['hostname']}</th>
-                        <th style="cursor: pointer;">{t['mac_address']}</th>
-                        <th style="cursor: pointer;">{t['vendor']}</th>
-                        <th style="cursor: pointer;">{t['scan_status_col']}</th>
-                        <th style="cursor: pointer;">{t['services']}</th>
-                        <th style="cursor: pointer;">{t['subnet']}</th>
+                        <th data-column="type" style="cursor: pointer;">{t['type']}</th>
+                        <th data-column="device_type" style="cursor: pointer;">Catégorie</th>
+                        <th data-column="ip_address" style="cursor: pointer;">{t['ip_address']}</th>
+                        <th data-column="hostname" style="cursor: pointer;">{t['hostname']}</th>
+                        <th data-column="hw_address" style="cursor: pointer;">{t['mac_address']}</th>
+                        <th data-column="vendor" style="cursor: pointer;">{t['vendor']}</th>
+                        <th data-column="scan_status" style="cursor: pointer;">{t['scan_status_col']}</th>
+                        <th data-column="services" style="cursor: pointer;">{t['services']}</th>
+                        <th data-column="subnet" style="cursor: pointer;">{t['subnet']}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -2711,11 +2711,12 @@ def generate_html(info, lang="fr"):
                         scanStatus = '<span title="' + t('never_scanned') + '" class="scan-icon">⭕</span> <span class="scan-text">' + t('never_scanned') + '</span>';
                     }}
                     
-                    // Use pre-formatted services HTML from server
+                    // Use pre-formatted services HTML from server - compact display
                     let servicesCol = '';
                     if (device.services_html && device.services_html.length > 0) {{
-                        const servicesItems = device.services_html.join('');
-                        servicesCol = `<ul style="margin:0;padding-left:20px;">${{servicesItems}}</ul>`;
+                        // Extract text from HTML for tooltip
+                        const servicesList = device.services_html.map(s => s.replace(/<[^>]*>/g, '').trim()).join('\\n');
+                        servicesCol = `<span style="cursor:help;" title="${{servicesList}}">${{device.services_html.length}} service(s)</span>`;
                     }} else {{
                         servicesCol = `<em class="no-service">${{t('no_service')}}</em>`;
                     }}
