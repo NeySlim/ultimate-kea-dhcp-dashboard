@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.6.0] - 2026-01-02 - Production-Ready Multi-Distribution Packaging
+
+### Major Milestone 🎉
+First production release with complete native package support for all major Linux distributions!
+
+### New Features
+- **NEW**: Native .deb packages for Debian/Ubuntu
+- **NEW**: Native .rpm packages for Red Hat/Fedora/CentOS/Rocky/Alma  
+- **NEW**: Native .pkg.tar.zst packages for Arch Linux
+- **NEW**: Automated package building via GitHub Actions
+- **NEW**: All packages include Kea DHCP as automatic dependency
+- **NEW**: Systemd service auto-configuration in all packages
+- **NEW**: Automatic user creation and permissions setup
+
+### Distribution Support
+- Debian 11+ and Ubuntu 20.04+
+- Red Hat 8+, Fedora 35+, Rocky Linux 8+, AlmaLinux 8+
+- Arch Linux (current)
+
+### Installation Simplified
+Users can now install with their native package manager:
+- `apt install ./ultimate-kea-dashboard_*.deb`
+- `dnf install ultimate-kea-dashboard-*.rpm`
+- `pacman -U ultimate-kea-dashboard-*.pkg.tar.zst`
+
+### Bug Fixes (from 1.5.7-1.5.9)
+- **FIXED**: Missing systemd service template file
+- **FIXED**: Debian compat file conflict with debhelper-compat
+- **FIXED**: Binary file permissions in packaging rules
+
+---
+
 ## [1.5.8] - 2026-01-01 - Packaging Fix
 
 ### Bug Fixes

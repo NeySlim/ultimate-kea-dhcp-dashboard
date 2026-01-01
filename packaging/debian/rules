@@ -29,4 +29,4 @@ override_dh_auto_test:
 override_dh_fixperms:
 	dh_fixperms
 	chmod +x debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/start.sh
-	chmod +x debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/bin/*.py
+	chmod +x debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/bin/ultimate-kea-dashboard
