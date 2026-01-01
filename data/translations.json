@@ -49,7 +49,13 @@
     "up_to_date": "À jour",
     "checking_updates": "Vérification...",
     "update_button": "Mettre à jour",
-    "update_error": "Erreur de vérification"
+    "update_error": "Erreur de vérification",
+    "refresh_interval": "Intervalle de rafraîchissement",
+    "refresh_interval_1s": "1 seconde (temps réel)",
+    "refresh_interval_2s": "2 secondes",
+    "refresh_interval_5s": "5 secondes",
+    "refresh_interval_10s": "10 secondes",
+    "refresh_interval_30s": "30 secondes"
   },
   "en": {
     "title": "Pinet DHCP Dashboard",
@@ -101,7 +107,13 @@
     "up_to_date": "Up to date",
     "checking_updates": "Checking...",
     "update_button": "Update now",
-    "update_error": "Check error"
+    "update_error": "Check error",
+    "refresh_interval": "Refresh interval",
+    "refresh_interval_1s": "1 second (real-time)",
+    "refresh_interval_2s": "2 seconds",
+    "refresh_interval_5s": "5 seconds",
+    "refresh_interval_10s": "10 seconds",
+    "refresh_interval_30s": "30 seconds"
   },
   "es": {
     "title": "Panel DHCP Pinet",
@@ -153,7 +165,13 @@
     "up_to_date": "Actualizado",
     "checking_updates": "Verificando...",
     "update_button": "Actualizar",
-    "update_error": "Error de verificación"
+    "update_error": "Error de verificación",
+    "refresh_interval": "Intervalo de actualización",
+    "refresh_interval_1s": "1 segundo (tiempo real)",
+    "refresh_interval_2s": "2 segundos",
+    "refresh_interval_5s": "5 segundos",
+    "refresh_interval_10s": "10 segundos",
+    "refresh_interval_30s": "30 segundos"
   },
   "de": {
     "title": "Pinet DHCP Dashboard",
@@ -205,7 +223,13 @@
     "up_to_date": "Aktuell",
     "checking_updates": "Prüfen...",
     "update_button": "Aktualisieren",
-    "update_error": "Prüffehler"
+    "update_error": "Prüffehler",
+    "refresh_interval": "Aktualisierungsintervall",
+    "refresh_interval_1s": "1 Sekunde (Echtzeit)",
+    "refresh_interval_2s": "2 Sekunden",
+    "refresh_interval_5s": "5 Sekunden",
+    "refresh_interval_10s": "10 Sekunden",
+    "refresh_interval_30s": "30 Sekunden"
   },
   "th": {
     "title": "แดชบอร์ด DHCP Pinet",
@@ -257,6 +281,12 @@
     "up_to_date": "ทันสมัย",
     "checking_updates": "กำลังตรวจสอบ...",
     "update_button": "อัปเดตเลย",
-    "update_error": "ข้อผิดพลาด"
+    "update_error": "ข้อผิดพลาด",
+    "refresh_interval": "ช่วงเวลารีเฟรช",
+    "refresh_interval_1s": "1 วินาที (เรียลไทม์)",
+    "refresh_interval_2s": "2 วินาที",
+    "refresh_interval_5s": "5 วินาที",
+    "refresh_interval_10s": "10 วินาที",
+    "refresh_interval_30s": "30 วินาที"
   }
 }

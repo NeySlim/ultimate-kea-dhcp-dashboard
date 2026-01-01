@@ -12,10 +12,10 @@ SCRIPT_DIR = Path(__file__).parent.parent.absolute()
 
 # Configuration file paths (checked in order)
 CONFIG_PATHS = [
-    str(SCRIPT_DIR / 'etc' / 'ultimate-dashboard.conf'),
-    '/etc/ultimate-dashboard/ultimate-dashboard.conf',
-    './ultimate-dashboard.conf',
-    '/opt/ultimate-dashboard/etc/ultimate-dashboard.conf',
+    str(SCRIPT_DIR / 'etc' / 'ultimate-kea-dashboard.conf'),
+    '/etc/ultimate-kea-dashboard/ultimate-kea-dashboard.conf',
+    './ultimate-kea-dashboard.conf',
+    '/opt/ultimate-kea-dashboard/etc/ultimate-kea-dashboard.conf',
 ]
 
 # Default configuration

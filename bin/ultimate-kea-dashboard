@@ -493,9 +493,14 @@ def extract_subnets_from_leases():
     return subnets
 
 
-def get_non_pool_ips_and_reservations():
+def get_non_pool_ips_and_reservations(active_leases=None):
     """Get IPs outside DHCP pools and DHCP reservations to scan"""
     static_devices = []
+    
+    # Build set of active lease IPs to exclude them
+    active_lease_ips = set()
+    if active_leases:
+        active_lease_ips = {lease.get('ip_address') for lease in active_leases if lease.get('ip_address')}
     
     try:
         subnets = get_subnets()
@@ -556,6 +561,7 @@ def get_non_pool_ips_and_reservations():
             # Also track failed/incomplete IPs to exclude them
             arp_ips = set()
             failed_ips = set()
+            arp_data = {}  # Store MAC addresses from ARP cache
             try:
                 result = subprocess.run(
                     ["ip", "neigh", "show"],
@@ -579,6 +585,13 @@ def get_non_pool_ips_and_reservations():
                                 else:
                                     # Only add successful ARP entries
                                     arp_ips.add(ip_obj)
+                                    # Extract MAC address
+                                    for i, part in enumerate(parts):
+                                        if part == "lladdr" and i + 1 < len(parts):
+                                            mac = parts[i + 1].upper()
+                                            if ':' in mac:
+                                                arp_data[str(ip_obj)] = mac
+                                            break
                             except:
                                 pass
             except:
@@ -605,16 +618,35 @@ def get_non_pool_ips_and_reservations():
                 
                 # If not in pool and not already a reservation, add as static IP candidate
                 if not in_pool:
+                    # Skip if this IP has an active DHCP lease
+                    if str(ip) in active_lease_ips:
+                        continue
+                    
                     # Check if already in reservations
                     already_reserved = any(d["ip_address"] == str(ip) for d in static_devices)
                     if not already_reserved:
+                        ip_str = str(ip)
+                        mac_addr = arp_data.get(ip_str, "")
+                        
+                        # Try to resolve hostname
+                        hostname = "N/A"
+                        try:
+                            hostname = socket.gethostbyaddr(ip_str)[0]
+                        except:
+                            pass
+                        
+                        # Get vendor from MAC if available
+                        vendor = "Unknown"
+                        if mac_addr:
+                            vendor = get_mac_vendor(mac_addr)
+                        
                         static_devices.append({
-                            "ip_address": str(ip),
-                            "hostname": "N/A",
-                            "hw_address": "",
+                            "ip_address": ip_str,
+                            "hostname": hostname,
+                            "hw_address": mac_addr,
                             "type": "static",
                             "subnet": subnet_cidr,
-                            "vendor": "Unknown",
+                            "vendor": vendor,
                             "device_type": "Unknown",
                             "device_icon": "🔧"
                         })
@@ -647,7 +679,7 @@ def update_dhcp_cache():
     while True:
         try:
             info = get_dhcp_info()
-            static_devices = get_non_pool_ips_and_reservations()
+            static_devices = get_non_pool_ips_and_reservations(info.get("leases", []))
             
             with DHCP_CACHE_LOCK:
                 DHCP_INFO_CACHE["pools"] = info.get("pools", [])
@@ -1403,6 +1435,42 @@ def generate_html(info, lang="fr"):
             .no-service {{
                 font-style: italic;
             }}
+            .services-badge {{
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 12px;
+                background: rgba(136, 192, 208, 0.2);
+                color: #88c0d0;
+                font-size: 0.85em;
+                font-weight: 600;
+                cursor: help;
+                position: relative;
+            }}
+            .services-tooltip {{
+                display: none;
+                position: absolute;
+                z-index: 1000;
+                background: #3b4252;
+                border: 1px solid #88c0d0;
+                border-radius: 4px;
+                padding: 8px;
+                min-width: 200px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                left: 0;
+                top: 100%;
+                margin-top: 4px;
+                white-space: nowrap;
+            }}
+            td:hover .services-tooltip {{
+                display: block;
+            }}
+            .services-tooltip a {{
+                color: #88c0d0;
+                text-decoration: none;
+            }}
+            .services-tooltip a:hover {{
+                color: #ebcb8b;
+            }}
             ul {{
                 margin: 0;
                 padding-left: 20px;
@@ -1771,6 +1839,18 @@ def generate_html(info, lang="fr"):
                         <button class="lang-option" data-lang="th">🇹🇭 ไทย</button>
                     </div>
                 </div>
+                <div style="margin: 15px 0; padding-top: 15px; border-top: 1px solid #4c566a;">
+                    <label>
+                        ⏱️ {t['refresh_interval']}:
+                    </label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="refresh-option" data-interval="1000">1s</button>
+                        <button class="refresh-option" data-interval="2000">2s</button>
+                        <button class="refresh-option" data-interval="5000">5s</button>
+                        <button class="refresh-option" data-interval="10000">10s</button>
+                        <button class="refresh-option" data-interval="30000">30s</button>
+                    </div>
+                </div>
                 <p style="color: #88c0d0; font-size: 0.9em; margin-top: 15px;">💡 {t['auto_saved']}</p>
             </div>
             
@@ -1832,13 +1912,14 @@ def generate_html(info, lang="fr"):
         
         <script src="/static/js/gauges.js"></script>
         <script>
-            // Settings and state management (refresh fixed at 1s)
-            const REFRESH_INTERVAL = 1000; // Fixed 1 second refresh
+            // Settings and state management
+            const REFRESH_INTERVAL = 1000; // Kept for compatibility, but now using settings.refreshInterval
             
             let settings = {{
                 theme: 'ember',
                 lang: '{lang}',
                 scanEnabled: true,  // Scan enabled by default
+                refreshInterval: 1000,  // 1 second by default
                 sortState: {{
                     poolsTable: {{ column: null, direction: 'asc' }},
                     leasesTable: {{ column: null, direction: 'asc' }},
@@ -1924,6 +2005,8 @@ def generate_html(info, lang="fr"):
                     waiting_next_scan: "En attente",
                     never_scanned: "Jamais scanné",
                     no_service: "Aucun service",
+                    service: "service",
+                    services: "services",
                     clients: "clients",
                     devices: "dispositifs",
                     reservation: "Réservation",
@@ -1951,6 +2034,8 @@ def generate_html(info, lang="fr"):
                     waiting_next_scan: "Waiting",
                     never_scanned: "Never scanned",
                     no_service: "No service",
+                    service: "service",
+                    services: "services",
                     clients: "clients",
                     devices: "devices",
                     reservation: "Reservation",
@@ -1973,7 +2058,10 @@ def generate_html(info, lang="fr"):
                     scan_in_progress: "Escaneando",
                     waiting_scan: "Esperando",
                     waiting_next_scan: "Esperando",
-                    never_scanned: "Nunca escaneado"
+                    never_scanned: "Nunca escaneado",
+                    no_service: "Ningún servicio",
+                    service: "servicio",
+                    services: "servicios"
                 }},
                 de: {{
                     last_update: "Letzte Aktualisierung",
@@ -1991,7 +2079,10 @@ def generate_html(info, lang="fr"):
                     scan_in_progress: "Scannen",
                     waiting_scan: "Warten",
                     waiting_next_scan: "Warten",
-                    never_scanned: "Nie gescannt"
+                    never_scanned: "Nie gescannt",
+                    no_service: "Kein Dienst",
+                    service: "Dienst",
+                    services: "Dienste"
                 }},
                 th: {{
                     last_update: "รีเฟรชล่าสุด",
@@ -2009,7 +2100,10 @@ def generate_html(info, lang="fr"):
                     scan_in_progress: "กำลังสแกน",
                     waiting_scan: "รอ",
                     waiting_next_scan: "รอ",
-                    never_scanned: "ไม่เคยสแกน"
+                    never_scanned: "ไม่เคยสแกน",
+                    no_service: "ไม่มีบริการ",
+                    service: "บริการ",
+                    services: "บริการ"
                 }}
             }};
             
@@ -2161,6 +2255,20 @@ def generate_html(info, lang="fr"):
                     }}
                     .no-service {{
                         color: ${{theme.text_secondary || theme.text_primary}};
+                    }}
+                    .services-badge {{
+                        background: rgba(${{parseInt(theme.info.slice(1,3), 16)}}, ${{parseInt(theme.info.slice(3,5), 16)}}, ${{parseInt(theme.info.slice(5,7), 16)}}, 0.2);
+                        color: ${{theme.info}};
+                    }}
+                    .services-tooltip {{
+                        background: ${{theme.bg_secondary}};
+                        border-color: ${{theme.info}};
+                    }}
+                    .services-tooltip a {{
+                        color: ${{theme.info}};
+                    }}
+                    .services-tooltip a:hover {{
+                        color: ${{theme.accent_secondary}};
                     }}
                     #settingsPanel {{
                         background: ${{theme.bg_secondary}};
@@ -2335,6 +2443,7 @@ def generate_html(info, lang="fr"):
                 
                 updateThemeUI();
                 updateLangUI();
+                updateRefreshIntervalUI();
                 applyTheme(settings.theme || 'ember');
             }}
             
@@ -2377,19 +2486,33 @@ def generate_html(info, lang="fr"):
             }}
             
             // Update UI to reflect current refresh interval
+            function updateRefreshIntervalUI() {{
+                document.querySelectorAll('.refresh-option').forEach(btn => {{
+                    const interval = parseInt(btn.dataset.interval);
+                    if (interval === settings.refreshInterval) {{
+                        btn.style.background = 'linear-gradient(135deg, #88c0d0, #8fbcbb)';
+                        btn.style.borderColor = '#88c0d0';
+                        btn.style.color = '#1a1515';
+                    }} else {{
+                        btn.style.background = '#3b4252';
+                        btn.style.borderColor = '#4c566a';
+                        btn.style.color = '#d8dee9';
+                    }}
+                }});
+            }}
             
-            // Start refresh cycle (fixed 1s interval)
+            // Start refresh cycle (using settings.refreshInterval)
             function startRefreshCycle() {{
                 // Clear existing timer
                 if (refreshTimer) clearInterval(refreshTimer);
                 
-                // Start refresh timer at 1 second
+                // Start refresh timer with configured interval
                 refreshTimer = setInterval(() => {{
                     updateTables();
                     updateScanCountdowns();
-                }}, REFRESH_INTERVAL);
+                }}, settings.refreshInterval);
                 
-                console.log(`Refresh cycle started: ${{REFRESH_INTERVAL}}ms (1s fixed)`);
+                console.log(`Refresh cycle started: ${{settings.refreshInterval}}ms`);
             }}
             
             // Apply saved sort to a table
@@ -2627,11 +2750,14 @@ def generate_html(info, lang="fr"):
                         scanStatus = '<span title="' + t('never_scanned') + '" class="scan-icon">⭕</span> <span class="scan-text">' + t('never_scanned') + '</span>';
                     }}
                     
-                    // Use pre-formatted services HTML from server (already includes <li> tags)
+                    // Use pre-formatted services HTML from server - compact display with hover
                     let servicesCol = '';
                     if (lease.services_html && lease.services_html.length > 0) {{
-                        const servicesItems = lease.services_html.join('');  // Already have <li> tags
-                        servicesCol = `<ul style="margin:0;padding-left:20px;">${{servicesItems}}</ul>`;
+                        // Build tooltip with HTML links
+                        const servicesHtml = lease.services_html.join('<br>');
+                        const count = lease.services_html.length;
+                        const label = count === 1 ? t('service') : t('services');
+                        servicesCol = `<span class="services-badge">${{count}} ${{label}}<div class="services-tooltip">${{servicesHtml}}</div></span>`;
                     }} else {{
                         servicesCol = `<em class="no-service">${{t('no_service')}}</em>`;
                     }}
@@ -2651,13 +2777,22 @@ def generate_html(info, lang="fr"):
                         if (snmp.sysLocation) snmpParts.push(`<strong>${{t('location')}}:</strong> ${{snmp.sysLocation}}`);
                         if (snmp.sysUpTime) snmpParts.push(`<strong>${{t('uptime')}}:</strong> ${{snmp.sysUpTime}}`);
                         if (snmpParts.length > 0) {{
-                            snmpDisplay = `<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(0,255,0,0.1); border-left:3px solid #28a745; font-size:0.85em;"><div style="margin-bottom:3px; font-weight:600;">📊 SNMP:</div>${{snmpParts.join('<br>')}}</div>`;
+                            // Add SNMP to tooltip if services exist, otherwise standalone badge
+                            if (lease.services_html && lease.services_html.length > 0) {{
+                                const snmpInfo = snmpParts.join('<br>');
+                                servicesCol = servicesCol.replace('</div></span>', `<hr style="margin:4px 0;border:none;border-top:1px solid #88c0d0;"><strong>📊 SNMP:</strong><br>${{snmpInfo}}</div></span>`);
+                            }} else {{
+                                servicesCol = `<span class="services-badge">SNMP<div class="services-tooltip"><strong>📊 SNMP:</strong><br>${{snmpParts.join('<br>')}}</div></span>`;
+                            }}
                         }}
                     }} else if (hasSnmpPort) {{
-                        snmpDisplay = `<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(128,128,128,0.1); border-left:3px solid #888; font-size:0.85em; font-weight:600;">📊 SNMP?</div>`;
+                        // Add "SNMP?" indicator to tooltip
+                        if (lease.services_html && lease.services_html.length > 0) {{
+                            servicesCol = servicesCol.replace('</div></span>', '<hr style="margin:4px 0;border:none;border-top:1px solid #888;"><span style="color:#888;">📊 SNMP?</span></div></span>');
+                        }} else {{
+                            servicesCol = `<span class="services-badge" style="background:rgba(128,128,128,0.2);color:#888;">SNMP?</span>`;
+                        }}
                     }}
-                    
-                    servicesCol = servicesCol + snmpDisplay;
                     
                     html += `<tr class="${{stateClass}}">
                         <td style="font-size: 1.3em; text-align: center;" title="${{lease.device_type || 'Unknown'}}">${{icon}}</td>
@@ -2711,18 +2846,19 @@ def generate_html(info, lang="fr"):
                         scanStatus = '<span title="' + t('never_scanned') + '" class="scan-icon">⭕</span> <span class="scan-text">' + t('never_scanned') + '</span>';
                     }}
                     
-                    // Use pre-formatted services HTML from server - compact display
+                    // Use pre-formatted services HTML from server - compact display with hover
                     let servicesCol = '';
                     if (device.services_html && device.services_html.length > 0) {{
-                        // Extract text from HTML for tooltip
-                        const servicesList = device.services_html.map(s => s.replace(/<[^>]*>/g, '').trim()).join('\\n');
-                        servicesCol = `<span style="cursor:help;" title="${{servicesList}}">${{device.services_html.length}} service(s)</span>`;
+                        // Build tooltip with HTML links
+                        const servicesHtml = device.services_html.join('<br>');
+                        const count = device.services_html.length;
+                        const label = count === 1 ? t('service') : t('services');
+                        servicesCol = `<span class="services-badge">${{count}} ${{label}}<div class="services-tooltip">${{servicesHtml}}</div></span>`;
                     }} else {{
                         servicesCol = `<em class="no-service">${{t('no_service')}}</em>`;
                     }}
                     
                     // Add SNMP info if available - check if port 161 is open
-                    let snmpDisplay = '';
                     const hasSnmpPort = device.services && device.services.some(s => s.port && s.port.startsWith('161/'));
                     
                     if (device.snmp_info && device.snmp_info.available) {{
@@ -2736,13 +2872,22 @@ def generate_html(info, lang="fr"):
                         if (snmp.sysLocation) snmpParts.push(`<strong>${{t('location')}}:</strong> ${{snmp.sysLocation}}`);
                         if (snmp.sysUpTime) snmpParts.push(`<strong>${{t('uptime')}}:</strong> ${{snmp.sysUpTime}}`);
                         if (snmpParts.length > 0) {{
-                            snmpDisplay = `<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(0,255,0,0.1); border-left:3px solid #28a745; font-size:0.85em;"><div style="margin-bottom:3px; font-weight:600;">📊 SNMP:</div>${{snmpParts.join('<br>')}}</div>`;
+                            // Add SNMP to tooltip if services exist, otherwise standalone badge
+                            if (device.services_html && device.services_html.length > 0) {{
+                                const snmpInfo = snmpParts.join('<br>');
+                                servicesCol = servicesCol.replace('</div></span>', `<hr style="margin:4px 0;border:none;border-top:1px solid #88c0d0;"><strong>📊 SNMP:</strong><br>${{snmpInfo}}</div></span>`);
+                            }} else {{
+                                servicesCol = `<span class="services-badge">SNMP<div class="services-tooltip"><strong>📊 SNMP:</strong><br>${{snmpParts.join('<br>')}}</div></span>`;
+                            }}
                         }}
                     }} else if (hasSnmpPort) {{
-                        snmpDisplay = `<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(128,128,128,0.1); border-left:3px solid #888; font-size:0.85em; font-weight:600;">📊 SNMP?</div>`;
+                        // Add "SNMP?" indicator to tooltip
+                        if (device.services_html && device.services_html.length > 0) {{
+                            servicesCol = servicesCol.replace('</div></span>', '<hr style="margin:4px 0;border:none;border-top:1px solid #888;"><span style="color:#888;">📊 SNMP?</span></div></span>');
+                        }} else {{
+                            servicesCol = `<span class="services-badge" style="background:rgba(128,128,128,0.2);color:#888;">SNMP?</span>`;
+                        }}
                     }}
-                    
-                    servicesCol = servicesCol + snmpDisplay;
                     
                     html += `<tr>
                         <td style="font-size: 1.3em; text-align: center;" title="${{device.device_type || 'Unknown'}}">${{icon}}</td>
@@ -2781,7 +2926,7 @@ def generate_html(info, lang="fr"):
                 setInterval(checkForUpdates, 3600000); // 3600000ms = 1 hour
                 
                 // Initialize system monitoring gauges (loaded from external file)
-                initGauges(themes, settings);
+                let restartGaugesCycle = initGauges(themes, settings);
                 
                 // Initialize scan state from settings
                 const scanStatusEl = document.getElementById('scanStatus');
@@ -2911,6 +3056,19 @@ def generate_html(info, lang="fr"):
                         updateLangUI();
                         // Reload page to apply new language
                         window.location.href = `/?lang=${{settings.lang}}`;
+                    }});
+                }});
+                
+                // Refresh interval selection buttons
+                document.querySelectorAll('.refresh-option').forEach(btn => {{
+                    btn.addEventListener('click', () => {{
+                        settings.refreshInterval = parseInt(btn.dataset.interval);
+                        saveSettings();
+                        updateRefreshIntervalUI();
+                        // Restart refresh cycle with new interval
+                        startRefreshCycle();
+                        // Restart gauges cycle with new interval
+                        if (restartGaugesCycle) restartGaugesCycle();
                     }});
                 }});
                 

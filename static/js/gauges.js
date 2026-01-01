@@ -1,5 +1,7 @@
 // System monitoring gauges
 function initGauges(themes, settings) {
+    let gaugesInterval = null;
+    
     function updateGauges() {
         fetch('/api/stats')
             .then(res => res.json())
@@ -65,7 +67,22 @@ function initGauges(themes, settings) {
             .catch(err => console.error('Stats error:', err));
     }
     
-    // Update every 1 second
-    updateGauges();
-    setInterval(updateGauges, 1000);
+    // Start gauges update cycle
+    function startGaugesCycle() {
+        // Clear existing interval
+        if (gaugesInterval) clearInterval(gaugesInterval);
+        
+        // Update immediately
+        updateGauges();
+        
+        // Start interval with configured refresh rate
+        gaugesInterval = setInterval(updateGauges, settings.refreshInterval || 1000);
+        console.log(`Gauges cycle started: ${{settings.refreshInterval || 1000}}ms`);
+    }
+    
+    // Initial start
+    startGaugesCycle();
+    
+    // Return function to restart cycle when settings change
+    return startGaugesCycle;
 }
