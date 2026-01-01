@@ -547,16 +547,40 @@ def get_non_pool_ips_and_reservations():
                     })
             
             # Find IPs outside pools (static IPs)
-            # For efficiency, we'll scan specific ranges commonly used for static IPs
-            # For example, first 10 IPs and last 10 IPs of the subnet (excluding network/broadcast)
+            # Strategy: Scan IPs that are either:
+            # 1. Already known (in ARP cache or responding to ping)
+            # 2. In common static IP ranges (first 50 and last 50)
             all_ips = list(network.hosts())
             
-            if len(all_ips) > 20:
-                # Scan first 10 and last 10
-                ips_to_check = all_ips[:10] + all_ips[-10:]
+            # Get IPs from ARP cache to find active devices
+            arp_ips = set()
+            try:
+                result = subprocess.run(
+                    ["ip", "neigh", "show"],
+                    capture_output=True,
+                    text=True,
+                    timeout=2
+                )
+                if result.returncode == 0:
+                    for line in result.stdout.split('\n'):
+                        parts = line.split()
+                        if len(parts) > 0 and parts[0]:
+                            try:
+                                ip_obj = ipaddress.ip_address(parts[0])
+                                if ip_obj in network:
+                                    arp_ips.add(ip_obj)
+                            except:
+                                pass
+            except:
+                pass
+            
+            # Combine IPs to check: common static ranges + ARP discovered
+            if len(all_ips) > 100:
+                # For large subnets, scan first 50 and last 50 + ARP discovered
+                ips_to_check = set(all_ips[:50] + all_ips[-50:]) | arp_ips
             else:
-                # Scan all if small subnet
-                ips_to_check = all_ips
+                # For small subnets, scan all
+                ips_to_check = set(all_ips) | arp_ips
             
             for ip in ips_to_check:
                 # Check if IP is in any pool
@@ -840,9 +864,17 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 leases.append(lease_copy)
             
             # Enrich static devices with scanned data
+            # Build set of lease IPs to avoid duplicates
+            lease_ips = {lease['ip_address'] for lease in leases}
+            
             static_devices = []
             for device in info.get('static_devices', []):
                 ip = device['ip_address']
+                
+                # Skip if IP is already in DHCP leases
+                if ip in lease_ips:
+                    continue
+                
                 device_copy = device.copy()
                 
                 # device_icon is already set by get_dhcp_info_cached()
@@ -881,7 +913,16 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 device_copy['icon_html'] = custom_svg if custom_svg else None
                 device_copy['snmp_info'] = enhanced.get('snmp_info')
                 
-                static_devices.append(device_copy)
+                # Only include devices that have responded (have MAC, services, or valid hostname)
+                # This filters out IPs that don't respond or don't exist
+                has_mac = device_copy.get('hw_address') and device_copy['hw_address'] not in ['', None]
+                has_services = len(services) > 0
+                has_hostname = device_copy.get('hostname') not in ['N/A', None, '']
+                is_reservation = device_copy.get('type') == 'reservation'
+                
+                # Include if: it's a reservation OR it has responded (MAC/services/hostname)
+                if is_reservation or has_mac or has_services or has_hostname:
+                    static_devices.append(device_copy)
             
             data = {
                 'pools': info.get('pools', []),
@@ -2486,7 +2527,7 @@ def generate_html(info, lang="fr"):
                     
                     // Add SNMP info if available - check if port 161 is open
                     let snmpDisplay = '';
-                    const hasSnmpPort = lease.services_html && lease.services_html.some(s => s.includes('161/'));
+                    const hasSnmpPort = lease.services && lease.services.some(s => s.port && s.port.startsWith('161/'));
                     
                     if (lease.snmp_info && lease.snmp_info.available) {{
                         const snmp = lease.snmp_info;
@@ -2570,7 +2611,7 @@ def generate_html(info, lang="fr"):
                     
                     // Add SNMP info if available - check if port 161 is open
                     let snmpDisplay = '';
-                    const hasSnmpPort = device.services_html && device.services_html.some(s => s.includes('161/'));
+                    const hasSnmpPort = device.services && device.services.some(s => s.port && s.port.startsWith('161/'));
                     
                     if (device.snmp_info && device.snmp_info.available) {{
                         const snmp = device.snmp_info;

@@ -1,5 +1,60 @@
 # Changelog
 
+## [2.5.4] - 2026-01-01 - Static Devices Filtering
+
+### Improvements
+- **IMPROVED**: Static devices table now only shows devices that respond
+  - Filters out IPs with no MAC address, no services, and no hostname
+  - Removes duplicate IPs already shown in DHCP leases table
+  - Significantly reduces clutter (from 133 to ~10-15 active devices)
+  - DHCP reservations are always shown regardless of response status
+
+### Bug Fixes
+- **FIXED**: IPs from DHCP pool appearing in static devices table
+- **FIXED**: Duplicate devices shown in both leases and static tables
+- **FIXED**: Empty/non-responsive IPs cluttering the static devices list
+
+### Technical Details
+- API endpoint now filters static_devices before sending to frontend
+- Checks for: `has_mac OR has_services OR has_hostname OR is_reservation`
+- Excludes any IP already present in DHCP leases to avoid duplicates
+- Results in cleaner, more useful static devices display
+
+---
+
+## [2.5.3] - 2026-01-01 - Static Devices Detection Enhancement
+
+### Improvements
+- **IMPROVED**: Static devices detection now includes ARP cache discovery
+  - Changed from scanning only first/last 10 IPs to first/last 50 + ARP cache
+  - Automatically detects all active devices outside DHCP pools
+  - Devices like 192.168.1.133 (pve.lan.pew.pet) now properly detected
+  - More efficient scanning strategy for large subnets
+
+### Technical Details
+- Uses `ip neigh show` to discover active devices from ARP cache
+- Combines ARP-discovered IPs with common static ranges (first 50, last 50)
+- For subnets < 100 hosts, scans all IPs outside pools
+- Significantly improves device discovery without excessive network scanning
+
+---
+
+## [2.5.2] - 2026-01-01 - SNMP Display Fix
+
+### Bug Fixes
+- **FIXED**: SNMP information not displaying in web interface
+  - Fixed JavaScript detection of SNMP port 161
+  - Changed from checking `services_html` to `services` array
+  - SNMP details now properly display with system description, contact, location, and uptime
+  - Affects both DHCP leases and static devices tables
+
+### Technical Details
+- The SNMP port 161 is intentionally excluded from `services_html` to avoid duplication
+- JavaScript now correctly checks the raw `services` array for port detection
+- SNMP info displays in a styled green-bordered div when available
+
+---
+
 ## [2.5.0] - 2026-01-01 - SNMP System Discovery
 
 ### SNMP Features
