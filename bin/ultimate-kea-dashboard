@@ -1786,16 +1786,16 @@ def generate_html(info, lang="fr"):
             <table id="leasesTable">
                 <thead>
                     <tr>
-                        <th>{t['type']}</th>
-                        <th>{t['ip_address']}</th>
-                        <th>{t['hostname']}</th>
-                        <th>{t['mac_address']}</th>
-                        <th>{t['vendor']}</th>
-                        <th>{t['scan_status_col']}</th>
-                        <th>{t['services']}</th>
-                        <th>{t['lease_start']}</th>
-                        <th>{t['expiration']}</th>
-                        <th>{t['duration']}</th>
+                        <th style="cursor: pointer;">{t['type']}</th>
+                        <th style="cursor: pointer;">{t['ip_address']}</th>
+                        <th style="cursor: pointer;">{t['hostname']}</th>
+                        <th style="cursor: pointer;">{t['mac_address']}</th>
+                        <th style="cursor: pointer;">{t['vendor']}</th>
+                        <th style="cursor: pointer;">{t['scan_status_col']}</th>
+                        <th style="cursor: pointer;">{t['services']}</th>
+                        <th style="cursor: pointer;">{t['lease_start']}</th>
+                        <th style="cursor: pointer;">{t['expiration']}</th>
+                        <th style="cursor: pointer;">{t['duration']}</th>
                     </tr>
                 </thead>
                 <tbody>
