@@ -1,4 +1,4 @@
-ultimate-kea-dashboard (1.5.7-1) unstable; urgency=medium
+ultimate-kea-dashboard (1.5.8-1) unstable; urgency=medium
 
   * New upstream release 1.5.7
   * Added native packaging for Debian/Ubuntu, Red Hat/Fedora, and Arch Linux

@@ -68,7 +68,7 @@ Pre-built packages are available for major Linux distributions:
 **Debian/Ubuntu:**
 ```bash
 # Download the latest .deb package from releases
-wget https://github.com/neyser/ultimate-kea-dashboard/releases/latest/download/ultimate-kea-dashboard_1.5.7-1_all.deb
+wget https://github.com/neyser/ultimate-kea-dashboard/releases/latest/download/ultimate-kea-dashboard_1.5.8-1_all.deb
 sudo dpkg -i ultimate-kea-dashboard_*.deb
 sudo apt-get install -f  # Install dependencies if needed
 ```
@@ -76,14 +76,14 @@ sudo apt-get install -f  # Install dependencies if needed
 **Red Hat/Fedora/CentOS:**
 ```bash
 # Download the latest .rpm package from releases
-wget https://github.com/neyser/ultimate-kea-dashboard/releases/latest/download/ultimate-kea-dashboard-1.5.7-1.noarch.rpm
+wget https://github.com/neyser/ultimate-kea-dashboard/releases/latest/download/ultimate-kea-dashboard-1.5.8-1.noarch.rpm
 sudo dnf install ultimate-kea-dashboard-*.rpm
 ```
 
 **Arch Linux:**
 ```bash
 # Download the latest package from releases
-wget https://github.com/neyser/ultimate-kea-dashboard/releases/latest/download/ultimate-kea-dashboard-1.5.7-1-any.pkg.tar.zst
+wget https://github.com/neyser/ultimate-kea-dashboard/releases/latest/download/ultimate-kea-dashboard-1.5.8-1-any.pkg.tar.zst
 sudo pacman -U ultimate-kea-dashboard-*.pkg.tar.zst
 ```
 

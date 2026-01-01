@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.8] - 2026-01-01 - Packaging Fix
+
+### Bug Fixes
+- **FIXED**: Missing systemd service file in repository for packaging
+- Added etc/ultimate-kea-dashboard.service template file
+
+---
+
 ## [1.5.7] - 2026-01-01 - Multi-Distribution Packaging
 
 ### New Features
