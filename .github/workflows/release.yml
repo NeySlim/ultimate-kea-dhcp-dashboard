@@ -9,10 +9,55 @@ permissions:
   contents: write
 
 jobs:
+  build-packages:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - distro: debian
+            format: deb
+          - distro: ubuntu
+            format: deb
+          - distro: fedora
+            format: rpm
+          - distro: rocky
+            format: rpm
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install packaging tools
+        run: |
+          if [ "${{ matrix.format }}" = "deb" ]; then
+            sudo apt-get update
+            sudo apt-get install -y dpkg-dev debhelper
+          else
+            sudo apt-get update
+            sudo apt-get install -y rpm
+          fi
+      
+      - name: Build ${{ matrix.distro }} package
+        run: |
+          cd packaging
+          chmod +x build-${{ matrix.format }}.sh
+          ./build-${{ matrix.format }}.sh
+      
+      - name: Upload ${{ matrix.distro }} package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.distro }}-package
+          path: packaging/*.$${{ matrix.format }}
+  
   release:
+    needs: build-packages
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      
+      - name: Download all packages
+        uses: actions/download-artifact@v4
+        with:
+          path: packages
       
       - name: Generate installer
         run: |
@@ -26,6 +71,8 @@ jobs:
             ultimate-kea-dashboard-installer.sh
             install.sh
             README.md
+            packages/*/*.deb
+            packages/*/*.rpm
           draft: false
           prerelease: false
         env:
