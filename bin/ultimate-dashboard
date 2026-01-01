@@ -99,15 +99,22 @@ def load_config():
     try:
         parser.read(config_file)
         
-        if 'server' in parser:
-            for key, value in parser['server'].items():
-                if key in DEFAULT_CONFIG:
-                    if isinstance(DEFAULT_CONFIG[key], bool):
-                        config[key] = parser.getboolean('server', key)
-                    elif isinstance(DEFAULT_CONFIG[key], int):
-                        config[key] = parser.getint('server', key)
-                    else:
-                        config[key] = value
+        # Try both DEFAULT and server sections
+        sections_to_check = ['DEFAULT', 'server']
+        for section in sections_to_check:
+            if section in parser or section == 'DEFAULT':
+                section_data = parser[section] if section in parser else parser.defaults()
+                for key, value in section_data.items():
+                    if key in DEFAULT_CONFIG:
+                        if isinstance(DEFAULT_CONFIG[key], bool):
+                            config[key] = parser.getboolean(section, key) if section in parser else value.lower() in ('true', '1', 'yes')
+                        elif isinstance(DEFAULT_CONFIG[key], int):
+                            config[key] = parser.getint(section, key) if section in parser else int(value)
+                        elif isinstance(DEFAULT_CONFIG[key], list):
+                            # Handle comma-separated lists
+                            config[key] = [item.strip() for item in value.split(',')]
+                        else:
+                            config[key] = value
     except Exception as e:
         print(f"Error loading config: {e}")
 
@@ -1107,7 +1114,10 @@ def generate_html(info, lang="fr"):
                 snmp_parts.append(f"<strong>{t.get('uptime', 'Uptime')}:</strong> {escape(snmp_info['sysUpTime'])}")
             
             if snmp_parts:
-                snmp_display = f'<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(0,255,0,0.1); border-left:3px solid #28a745; font-size:0.8em;"><div style="margin-bottom:3px;"><strong>📡 SNMP</strong></div>{"<br>".join(snmp_parts)}</div>'
+                snmp_display = f'<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(0,255,0,0.1); border-left:3px solid #28a745; font-size:0.85em;"><div style="margin-bottom:3px; font-weight:600;">🔍 SNMP:</div>{"<br>".join(snmp_parts)}</div>'
+        elif config.get('enable_snmp', True) and is_static:
+            # Show SNMP? if SNMP is enabled but no info available yet
+            snmp_display = f'<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(128,128,128,0.1); border-left:3px solid #888; font-size:0.85em; font-weight:600;">🔍 SNMP?</div>'
         
         scan_status_with_snmp = scan_status_with_btn + snmp_display
         
