@@ -36,6 +36,7 @@ from network_scanner import (
 )
 from device_detection import get_device_type, format_service_link, SERVICE_ICONS
 from mac_vendor import get_mac_vendor
+import custom_devices
 
 # Translations
 TRANSLATIONS = {
@@ -70,6 +71,9 @@ TRANSLATIONS = {
         "duration": "Durée",
         "no_pools": "Aucun pool trouvé",
         "scanning": "Scan...",
+        "scan_in_progress": "Scan en cours",
+        "waiting_scan": "Attente scan",
+        "never_scanned": "Jamais scanné",
         "progress": "Progression",
         "static_devices": "Dispositifs Statiques & Réservations",
         "devices": "dispositifs",
@@ -109,6 +113,9 @@ TRANSLATIONS = {
         "duration": "Duration",
         "no_pools": "No pools found",
         "scanning": "Scanning...",
+        "scan_in_progress": "Scanning",
+        "waiting_scan": "Waiting",
+        "never_scanned": "Never scanned",
         "progress": "Progress",
         "static_devices": "Static Devices & Reservations",
         "devices": "devices",
@@ -391,90 +398,8 @@ def get_device_info_async(ip, hostname, vendor, mac):
 
 
 def get_custom_icon_svg(hostname):
-    """Generate custom SVG icons for special devices"""
-    h = hostname.lower() if hostname else ""
-    
-    # Marvin - PC Gaming Maître (Setup puissant avec écran large)
-    if "marvin" in h:
-        return """<svg width="24" height="24" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <linearGradient id="marvin-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:#ff4500;stop-opacity:1" />
-                    <stop offset="50%" style="stop-color:#ffd700;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#ff4500;stop-opacity:1" />
-                </linearGradient>
-                <linearGradient id="screen-glow" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style="stop-color:#00ff88;stop-opacity:0.8" />
-                    <stop offset="100%" style="stop-color:#0088ff;stop-opacity:0.8" />
-                </linearGradient>
-            </defs>
-            <!-- Desk/Base -->
-            <rect x="6" y="36" width="36" height="3" rx="1" fill="#333"/>
-            <!-- Monitor stand -->
-            <rect x="22" y="30" width="4" height="6" fill="#555"/>
-            <rect x="18" y="35" width="12" height="2" rx="1" fill="#444"/>
-            <!-- Large curved monitor -->
-            <path d="M 8 12 Q 8 8 12 8 L 36 8 Q 40 8 40 12 L 40 28 Q 40 32 36 32 L 12 32 Q 8 32 8 28 Z" 
-                  fill="#1a1a1a" stroke="url(#marvin-grad)" stroke-width="1.5"/>
-            <!-- Screen glow -->
-            <rect x="11" y="11" width="26" height="18" rx="1" fill="url(#screen-glow)" opacity="0.9"/>
-            <!-- RGB lighting strips -->
-            <rect x="6" y="38" width="8" height="1" fill="#ff0088" opacity="0.8"/>
-            <rect x="18" y="38" width="12" height="1" fill="#00ff88" opacity="0.8"/>
-            <rect x="34" y="38" width="8" height="1" fill="#0088ff" opacity="0.8"/>
-            <!-- Power LED -->
-            <circle cx="24" cy="34" r="1" fill="#00ff00" opacity="0.9">
-                <animate attributeName="opacity" values="0.9;0.3;0.9" dur="2s" repeatCount="indefinite"/>
-            </circle>
-            <!-- Crown badge -->
-            <path d="M 20 4 L 22 7 L 24 4 L 26 7 L 28 4 L 27 10 L 21 10 Z" fill="#ffd700" stroke="#ff4500" stroke-width="0.5"/>
-            <text x="24" y="23" font-size="6" text-anchor="middle" fill="#ffd700" font-weight="bold" font-family="monospace">M</text>
-        </svg>"""
-    
-    # Shepard - PC Gaming Apprenti (Mini PC gamer compact)
-    elif "shepard" in h:
-        return """<svg width="24" height="24" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <linearGradient id="shepard-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#2196F3;stop-opacity:1" />
-                </linearGradient>
-                <linearGradient id="mini-screen" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style="stop-color:#64B5F6;stop-opacity:0.9" />
-                    <stop offset="100%" style="stop-color:#1976D2;stop-opacity:0.9" />
-                </linearGradient>
-            </defs>
-            <!-- Desk -->
-            <rect x="10" y="38" width="28" height="2" rx="1" fill="#444"/>
-            <!-- Mini PC case (cube style) -->
-            <rect x="14" y="20" width="12" height="14" rx="1" fill="#2a2a2a" stroke="url(#shepard-grad)" stroke-width="1.2"/>
-            <!-- Front panel -->
-            <rect x="15" y="22" width="10" height="11" fill="#1a1a1a"/>
-            <!-- RGB fan (top) -->
-            <circle cx="20" cy="25" r="3" fill="none" stroke="#4CAF50" stroke-width="0.8" opacity="0.7">
-                <animateTransform attributeName="transform" type="rotate" from="0 20 25" to="360 20 25" dur="3s" repeatCount="indefinite"/>
-            </circle>
-            <!-- Power button -->
-            <circle cx="20" cy="31" r="1.5" fill="#2196F3" opacity="0.8">
-                <animate attributeName="opacity" values="0.8;0.4;0.8" dur="1.5s" repeatCount="indefinite"/>
-            </circle>
-            <!-- Small monitor -->
-            <rect x="28" y="24" width="11" height="9" rx="0.5" fill="#1a1a1a" stroke="url(#shepard-grad)" stroke-width="1"/>
-            <!-- Monitor screen -->
-            <rect x="29" y="25" width="9" height="6" rx="0.3" fill="url(#mini-screen)"/>
-            <!-- Monitor stand -->
-            <rect x="32" y="33" width="3" height="4" fill="#555"/>
-            <rect x="30" y="37" width="7" height="1" rx="0.5" fill="#444"/>
-            <!-- Level indicator (learner badge) -->
-            <rect x="15" y="40" width="4" height="1.5" fill="#4CAF50" opacity="0.8"/>
-            <rect x="20" y="40" width="3" height="1.5" fill="#4CAF50" opacity="0.5"/>
-            <rect x="24" y="40" width="2" height="1.5" fill="#666" opacity="0.3"/>
-            <!-- Badge S -->
-            <circle cx="20" cy="16" r="5" fill="url(#shepard-grad)" opacity="0.9"/>
-            <text x="20" y="19" font-size="6" text-anchor="middle" fill="white" font-weight="bold" font-family="monospace">S</text>
-        </svg>"""
-    
-    return None
+    """Get custom SVG icons from custom_devices module"""
+    return custom_devices.get_custom_icon_svg(hostname)
 
 
 
@@ -1239,21 +1164,21 @@ def generate_html(info, lang="fr"):
             is_scanning = SCAN_IN_PROGRESS.get(ip, False)
             last_scan = LAST_SCAN_TIME.get(ip, 0)
         
-        # Calculate scan progress
+        # Calculate scan progress (DHCP Clients)
         if is_scanning:
-            scan_status = '<span title="Scan en cours" class="scan-icon">⏳</span>'
+            scan_status = f'<span title="{t["scan_in_progress"]}" class="scan-icon">🔍</span> <span class="scan-text">{t["scan_in_progress"]}</span>'
             countdown_display = ''
         elif last_scan > 0:
             time_since_scan = int(time.time() - last_scan)
             next_scan_in = max(0, 60 - time_since_scan)
             if next_scan_in > 0:
-                scan_status = '<span title="En attente du prochain scan" class="scan-icon">⏱️</span>'
+                scan_status = f'<span title="{t["waiting_scan"]}" class="scan-icon">⏱️</span>'
                 countdown_display = f'<span class="scan-countdown" data-ip="{ip}" data-next="{next_scan_in}">{next_scan_in}s</span>'
             else:
-                scan_status = '<span title="En attente" class="scan-icon">🔄</span>'
+                scan_status = f'<span title="{t["waiting_scan"]}" class="scan-icon">⏱️</span> <span class="scan-text">{t["waiting_scan"]}</span>'
                 countdown_display = ''
         else:
-            scan_status = '<span title="Jamais scanné" class="scan-icon">❌</span>'
+            scan_status = f'<span title="{t["never_scanned"]}" class="scan-icon">⭕</span> <span class="scan-text">{t["never_scanned"]}</span>'
             countdown_display = ''
         
         # Add pause button for individual scan (before status and countdown)
@@ -1329,21 +1254,21 @@ def generate_html(info, lang="fr"):
             is_scanning = SCAN_IN_PROGRESS.get(ip, False)
             last_scan = LAST_SCAN_TIME.get(ip, 0)
         
-        # Calculate scan progress
+        # Calculate scan progress (Static Devices)
         if is_scanning:
-            scan_status = '<span title="Scan en cours" class="scan-icon">⏳</span>'
+            scan_status = f'<span title="{t["scan_in_progress"]}" class="scan-icon">🔍</span> <span class="scan-text">{t["scan_in_progress"]}</span>'
             countdown_display = ''
         elif last_scan > 0:
             time_since_scan = int(time.time() - last_scan)
             next_scan_in = max(0, 60 - time_since_scan)
             if next_scan_in > 0:
-                scan_status = '<span title="En attente du prochain scan" class="scan-icon">⏱️</span>'
+                scan_status = f'<span title="{t["waiting_scan"]}" class="scan-icon">⏱️</span>'
                 countdown_display = f'<span class="scan-countdown" data-ip="{ip}" data-next="{next_scan_in}">{next_scan_in}s</span>'
             else:
-                scan_status = '<span title="En attente" class="scan-icon">🔄</span>'
+                scan_status = f'<span title="{t["waiting_scan"]}" class="scan-icon">⏱️</span> <span class="scan-text">{t["waiting_scan"]}</span>'
                 countdown_display = ''
         else:
-            scan_status = '<span title="Jamais scanné" class="scan-icon">❌</span>'
+            scan_status = f'<span title="{t["never_scanned"]}" class="scan-icon">⭕</span> <span class="scan-text">{t["never_scanned"]}</span>'
             countdown_display = ''
         
         # Add pause button for individual scan
@@ -2634,20 +2559,20 @@ def generate_html(info, lang="fr"):
                     const iconSVG = getDeviceIconSVG(lease.icon_name);
                     const icon = iconSVG || lease.device_icon || '❓';
                     
-                    // Build scan status
+                    // Build scan status (DHCP Clients - JavaScript)
                     let scanStatus = '';
                     if (lease.is_scanning) {{
-                        scanStatus = '<span title="Scan en cours" class="scan-icon">⏳</span>';
+                        scanStatus = '<span title="' + t('scan_in_progress') + '" class="scan-icon">🔍</span> <span class="scan-text">' + t('scan_in_progress') + '</span>';
                     }} else if (lease.last_scan > 0) {{
                         const timeSince = currentTime - Math.floor(lease.last_scan);
                         const nextIn = Math.max(0, 60 - timeSince);
                         if (nextIn > 0) {{
-                            scanStatus = '<span title="En attente" class="scan-icon">⏱️</span> <span class="scan-countdown">' + nextIn + 's</span>';
+                            scanStatus = '<span title="' + t('waiting_scan') + '" class="scan-icon">⏱️</span> <span class="scan-countdown">' + nextIn + 's</span>';
                         }} else {{
-                            scanStatus = '<span title="En attente" class="scan-icon">🔄</span>';
+                            scanStatus = '<span title="' + t('waiting_scan') + '" class="scan-icon">⏱️</span> <span class="scan-text">' + t('waiting_scan') + '</span>';
                         }}
                     }} else {{
-                        scanStatus = '<span title="Jamais scanné" class="scan-icon">❌</span>';
+                        scanStatus = '<span title="' + t('never_scanned') + '" class="scan-icon">⭕</span> <span class="scan-text">' + t('never_scanned') + '</span>';
                     }}
                     
                     // Use pre-formatted services HTML from server (already includes <li> tags)
@@ -2695,20 +2620,20 @@ def generate_html(info, lang="fr"):
                     const icon = iconSVG || device.device_icon || '🔧';
                     const ip = device.ip_address;
                     
-                    // Build scan status
+                    // Build scan status (Static Devices - JavaScript)
                     let scanStatus = '';
                     if (device.is_scanning) {{
-                        scanStatus = '<span title="Scan en cours" class="scan-icon">⏳</span>';
+                        scanStatus = '<span title="' + t('scan_in_progress') + '" class="scan-icon">🔍</span> <span class="scan-text">' + t('scan_in_progress') + '</span>';
                     }} else if (device.last_scan > 0) {{
                         const timeSince = currentTime - Math.floor(device.last_scan);
                         const nextIn = Math.max(0, 60 - timeSince);
                         if (nextIn > 0) {{
-                            scanStatus = '<span title="En attente" class="scan-icon">⏱️</span> <span class="scan-countdown">' + nextIn + 's</span>';
+                            scanStatus = '<span title="' + t('waiting_scan') + '" class="scan-icon">⏱️</span> <span class="scan-countdown">' + nextIn + 's</span>';
                         }} else {{
-                            scanStatus = '<span title="En attente" class="scan-icon">🔄</span>';
+                            scanStatus = '<span title="' + t('waiting_scan') + '" class="scan-icon">⏱️</span> <span class="scan-text">' + t('waiting_scan') + '</span>';
                         }}
                     }} else {{
-                        scanStatus = '<span title="Jamais scanné" class="scan-icon">❌</span>';
+                        scanStatus = '<span title="' + t('never_scanned') + '" class="scan-icon">⭕</span> <span class="scan-text">' + t('never_scanned') + '</span>';
                     }}
                     
                     // Use pre-formatted services HTML from server
