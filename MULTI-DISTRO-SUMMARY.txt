@@ -1,0 +1,310 @@
+═══════════════════════════════════════════════════════════════════════════
+        ULTIMATE KEA DASHBOARD - SUPPORT MULTI-DISTRIBUTION
+                        Version 1.2.0
+═══════════════════════════════════════════════════════════════════════════
+
+RÉSUMÉ DES MODIFICATIONS
+========================
+
+Le projet Ultimate Kea Dashboard est maintenant installable sur plusieurs
+distributions Linux grâce à un système de détection automatique et 
+d'adaptation des commandes d'installation.
+
+FICHIERS MODIFIÉS
+=================
+
+1. install.sh
+   - Ajout fonction detect_distro() pour détecter la distribution
+   - Ajout fonction get_default_ssl_paths() pour les chemins SSL
+   - Adaptation install_dependencies() pour chaque gestionnaire de paquets
+   - Support APT, DNF, YUM, Pacman, Zypper
+
+2. README.md
+   - Section "Supported Distributions" ajoutée
+   - Instructions d'installation multi-distro
+   - Exemples pour chaque famille de distributions
+
+3. CHANGELOG.md
+   - Version 1.2.0 documentée
+   - Liste complète des ajouts multi-distro
+
+4. VERSION
+   - Mise à jour : 1.1.0 → 1.2.0
+
+NOUVEAUX FICHIERS
+=================
+
+Documentation :
+  • docs/DISTRIBUTIONS.md - Matrice complète de compatibilité
+  • docs/INSTALL-FEDORA.md - Guide détaillé Fedora/RHEL/CentOS
+  • docs/INSTALL-ARCH.md - Guide détaillé Arch/Manjaro
+  • docs/MULTI-DISTRO-DEV.md - Guide développeur pour ajouter des distros
+  • docs/README-MULTIDISTRO.md - Vue d'ensemble en français
+
+Utilitaires :
+  • test-distro-detection.sh - Script de test de détection
+
+DISTRIBUTIONS SUPPORTÉES
+========================
+
+✓ Debian et dérivés (APT)
+  - Debian 10+
+  - Ubuntu 20.04+
+  - Linux Mint 20+
+  - Pop!_OS 20.04+
+
+✓ Red Hat et dérivés (DNF/YUM)
+  - Fedora 35+
+  - CentOS 8+
+  - RHEL 8+
+  - Rocky Linux 8+
+  - AlmaLinux 8+
+  Note : EPEL automatiquement activé sur CentOS/RHEL
+
+✓ Arch et dérivés (Pacman)
+  - Arch Linux
+  - Manjaro
+  - EndeavourOS
+
+✓ SUSE et dérivés (Zypper)
+  - openSUSE Leap 15.3+
+  - openSUSE Tumbleweed
+  - SLES 15+
+
+FONCTIONNALITÉS PRINCIPALES
+============================
+
+1. Détection Automatique
+   - Lecture de /etc/os-release
+   - Identification du gestionnaire de paquets
+   - Sélection des dépendances appropriées
+
+2. Installation Adaptée
+   - Commandes d'installation par gestionnaire
+   - Noms de paquets spécifiques à chaque distro
+   - Chemins SSL par défaut adaptés
+
+3. Support Spécifique
+   - EPEL pour CentOS/RHEL
+   - Certificats dans /etc/pki/tls pour Red Hat
+   - Certificats dans /etc/ssl pour Debian/Arch
+   - Adaptations pour les conventions de chaque distribution
+
+DÉPENDANCES PAR DISTRIBUTION
+=============================
+
+Debian/Ubuntu :
+  apt-get install nmap arping python3 python3-pip
+
+Fedora :
+  dnf install nmap iputils python3 python3-pip
+
+CentOS/RHEL :
+  dnf install epel-release
+  dnf install nmap iputils python3 python3-pip
+
+Arch/Manjaro :
+  pacman -S nmap iputils python python-pip
+
+openSUSE :
+  zypper install nmap iputils python3 python3-pip
+
+CHEMINS SSL PAR DÉFAUT
+======================
+
+Debian/Ubuntu/Arch/openSUSE :
+  Certificat : /etc/ssl/certs/ssl-cert-snakeoil.pem
+  Clé privée : /etc/ssl/private/ssl-cert-snakeoil.key
+
+Fedora/RHEL/CentOS :
+  Certificat : /etc/pki/tls/certs/localhost.crt
+  Clé privée : /etc/pki/tls/private/localhost.key
+
+INSTALLATION
+============
+
+Installation automatique (recommandée) :
+
+  curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
+  sudo bash install.sh
+
+L'installateur :
+  1. Détecte votre distribution
+  2. Utilise le bon gestionnaire de paquets
+  3. Installe les dépendances appropriées
+  4. Configure les chemins SSL
+  5. Crée le service systemd
+  6. Démarre le dashboard
+
+TEST DE DÉTECTION
+==================
+
+Testez la détection sur votre système :
+
+  bash test-distro-detection.sh
+
+Sortie attendue :
+  - Distribution ID
+  - Distribution Name
+  - Version
+  - Package Manager
+  - Vérification Python
+  - Vérification Systemd
+
+DOCUMENTATION
+=============
+
+Vue d'ensemble :
+  • README.md - Documentation principale
+  • docs/README-MULTIDISTRO.md - Guide multi-distro en français
+  • docs/DISTRIBUTIONS.md - Matrice de compatibilité
+
+Guides par distribution :
+  • docs/INSTALL-FEDORA.md - Fedora, CentOS, RHEL, Rocky, AlmaLinux
+  • docs/INSTALL-ARCH.md - Arch Linux, Manjaro, EndeavourOS
+
+Pour les développeurs :
+  • docs/MULTI-DISTRO-DEV.md - Ajouter une nouvelle distribution
+
+PARTICULARITÉS PAR DISTRIBUTION
+================================
+
+Fedora/RHEL/CentOS :
+  • SELinux activé par défaut (configuration nécessaire)
+  • Firewalld comme pare-feu
+  • Certificats dans /etc/pki/tls
+
+Arch Linux :
+  • Rolling release
+  • python pointe vers python3
+  • Pacman avec flag --needed
+  • nftables recommandé
+
+Debian/Ubuntu :
+  • APT comme gestionnaire
+  • UFW comme pare-feu
+  • Certificats snakeoil par défaut
+
+COMMANDES DE GESTION
+=====================
+
+Toutes distributions (systemd) :
+
+  # Statut du service
+  sudo systemctl status ultimate-dashboard
+
+  # Démarrer
+  sudo systemctl start ultimate-dashboard
+
+  # Arrêter
+  sudo systemctl stop ultimate-dashboard
+
+  # Redémarrer
+  sudo systemctl restart ultimate-dashboard
+
+  # Activer au démarrage
+  sudo systemctl enable ultimate-dashboard
+
+  # Désactiver
+  sudo systemctl disable ultimate-dashboard
+
+  # Logs en temps réel
+  sudo journalctl -u ultimate-dashboard -f
+
+PARE-FEU
+========
+
+Debian/Ubuntu (UFW) :
+  sudo ufw allow 8089/tcp
+  sudo ufw reload
+
+Fedora/RHEL/CentOS (firewalld) :
+  sudo firewall-cmd --permanent --add-port=8089/tcp
+  sudo firewall-cmd --reload
+
+Arch (nftables) :
+  sudo nano /etc/nftables.conf
+  # Ajouter : tcp dport 8089 accept
+  sudo systemctl restart nftables
+
+SELINUX (RHEL/CentOS/Fedora)
+=============================
+
+  # Vérifier le statut
+  sestatus
+
+  # Autoriser le port
+  sudo semanage port -a -t http_port_t -p tcp 8089
+
+  # Vérifier les erreurs
+  sudo ausearch -m avc -ts recent | grep ultimate-dashboard
+
+DÉPANNAGE
+=========
+
+Service ne démarre pas :
+  sudo journalctl -u ultimate-dashboard -n 50 --no-pager
+  sudo python3 /opt/ultimate-kea-dashboard/bin/ultimate-dashboard
+
+Python manquant :
+  [Distribution] install python3 python3-pip
+
+Port déjà utilisé :
+  sudo lsof -i :8089
+  sudo nano /etc/ultimate-dashboard/ultimate-dashboard.conf
+
+Distribution non détectée :
+  cat /etc/os-release
+  Ouvrir une issue GitHub avec les informations
+
+CONTRIBUTION
+============
+
+Pour ajouter une nouvelle distribution :
+
+  1. Lire docs/MULTI-DISTRO-DEV.md
+  2. Modifier detect_distro() dans install.sh
+  3. Ajouter les dépendances dans install_dependencies()
+  4. Configurer get_default_ssl_paths()
+  5. Créer docs/INSTALL-VOTRE_DISTRO.md
+  6. Tester sur la distribution cible
+  7. Soumettre une Pull Request
+
+TESTS EFFECTUÉS
+===============
+
+✓ Détection de distribution (test-distro-detection.sh)
+✓ Syntaxe Bash (bash -n install.sh)
+✓ Système Debian 13 (test réussi)
+
+Tests recommandés avant release :
+  • Fedora 39+ en VM
+  • CentOS 8+ en VM
+  • Arch Linux en VM
+  • Ubuntu 22.04+ en VM
+
+PROCHAINES ÉTAPES
+=================
+
+1. Tester sur différentes distributions en VM
+2. Créer des packages natifs :
+   - .deb pour Debian/Ubuntu
+   - .rpm pour Fedora/RHEL
+   - PKGBUILD pour Arch (AUR)
+3. Ajouter support pour d'autres distributions :
+   - Alpine Linux
+   - Gentoo
+   - Void Linux
+4. Automatiser les tests avec GitHub Actions
+
+CONTACTS & SUPPORT
+==================
+
+GitHub : https://github.com/NeySlim/ultimate-kea-dashboard
+Issues : https://github.com/NeySlim/ultimate-kea-dashboard/issues
+Version : 1.2.0
+Date : 2026-01-01
+
+═══════════════════════════════════════════════════════════════════════════
+                        FIN DU RÉSUMÉ
+═══════════════════════════════════════════════════════════════════════════

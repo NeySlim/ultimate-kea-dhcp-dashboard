@@ -68,21 +68,77 @@ check_root() {
     fi
 }
 
+# Detect Linux distribution
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        DISTRO=$ID
+        DISTRO_VERSION=$VERSION_ID
+        DISTRO_NAME=$NAME
+    elif [ -f /etc/redhat-release ]; then
+        DISTRO="rhel"
+        DISTRO_NAME="Red Hat Enterprise Linux"
+    elif [ -f /etc/debian_version ]; then
+        DISTRO="debian"
+        DISTRO_NAME="Debian"
+    else
+        DISTRO="unknown"
+        DISTRO_NAME="Unknown"
+    fi
+    
+    # Determine package manager
+    case "$DISTRO" in
+        debian|ubuntu|linuxmint|pop)
+            PKG_MANAGER="apt"
+            PKG_UPDATE="apt-get update -qq"
+            PKG_INSTALL="apt-get install -y -qq"
+            ;;
+        fedora)
+            PKG_MANAGER="dnf"
+            PKG_UPDATE="dnf check-update -q || true"
+            PKG_INSTALL="dnf install -y -q"
+            ;;
+        centos|rhel|rocky|almalinux)
+            if command -v dnf &> /dev/null; then
+                PKG_MANAGER="dnf"
+                PKG_UPDATE="dnf check-update -q || true"
+                PKG_INSTALL="dnf install -y -q"
+            else
+                PKG_MANAGER="yum"
+                PKG_UPDATE="yum check-update -q || true"
+                PKG_INSTALL="yum install -y -q"
+            fi
+            ;;
+        arch|manjaro|endeavouros)
+            PKG_MANAGER="pacman"
+            PKG_UPDATE="pacman -Sy --noconfirm"
+            PKG_INSTALL="pacman -S --noconfirm --needed"
+            ;;
+        opensuse*|sles)
+            PKG_MANAGER="zypper"
+            PKG_UPDATE="zypper refresh -q"
+            PKG_INSTALL="zypper install -y"
+            ;;
+        *)
+            PKG_MANAGER="unknown"
+            ;;
+    esac
+}
+
 # Check system requirements
 check_requirements() {
     print_section "Checking System Requirements"
     
-    # Check OS
-    if [[ ! -f /etc/debian_version ]]; then
-        print_warning "This installer is designed for Debian/Ubuntu systems"
-        read -p "Continue anyway? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
-        fi
-    else
-        print_success "Debian/Ubuntu system detected"
+    # Detect distribution
+    detect_distro
+    
+    if [[ "$PKG_MANAGER" == "unknown" ]]; then
+        print_error "Unsupported Linux distribution: $DISTRO_NAME"
+        print_info "Supported distributions: Debian, Ubuntu, Fedora, CentOS, RHEL, Rocky, AlmaLinux, Arch, Manjaro, openSUSE"
+        exit 1
     fi
+    
+    print_success "$DISTRO_NAME detected (using $PKG_MANAGER)"
     
     # Check Python version
     if command -v python3 &> /dev/null; then
@@ -99,12 +155,68 @@ install_dependencies() {
     print_section "Installing Dependencies"
     
     print_info "Updating package lists..."
-    apt-get update -qq
+    eval $PKG_UPDATE >/dev/null 2>&1 || true
     
     print_info "Installing required packages..."
-    apt-get install -y -qq nmap arping python3 python3-pip >/dev/null 2>&1
+    
+    case "$PKG_MANAGER" in
+        apt)
+            eval $PKG_INSTALL nmap arping python3 python3-pip net-tools python3-psutil >/dev/null 2>&1
+            # Optional packages for enhanced features
+            print_info "Installing optional packages (SNMP, mDNS)..."
+            eval $PKG_INSTALL snmp avahi-utils >/dev/null 2>&1 || print_warning "Optional packages (snmp, avahi-utils) not installed - some features may be limited"
+            ;;
+        dnf|yum)
+            # EPEL required for some packages on RHEL/CentOS
+            if [[ "$DISTRO" == "centos" ]] || [[ "$DISTRO" == "rhel" ]] || [[ "$DISTRO" == "rocky" ]] || [[ "$DISTRO" == "almalinux" ]]; then
+                eval $PKG_INSTALL epel-release >/dev/null 2>&1 || true
+            fi
+            eval $PKG_INSTALL nmap iputils python3 python3-pip net-tools python3-psutil >/dev/null 2>&1
+            # Optional packages
+            print_info "Installing optional packages (SNMP, mDNS)..."
+            eval $PKG_INSTALL net-snmp-utils avahi-tools >/dev/null 2>&1 || print_warning "Optional packages (net-snmp-utils, avahi-tools) not installed - some features may be limited"
+            ;;
+        pacman)
+            eval $PKG_INSTALL nmap iputils python python-pip net-tools python-psutil >/dev/null 2>&1
+            # Optional packages
+            print_info "Installing optional packages (SNMP, mDNS)..."
+            eval $PKG_INSTALL net-snmp avahi >/dev/null 2>&1 || print_warning "Optional packages (net-snmp, avahi) not installed - some features may be limited"
+            ;;
+        zypper)
+            eval $PKG_INSTALL nmap iputils python3 python3-pip net-tools python3-psutil >/dev/null 2>&1
+            # Optional packages
+            print_info "Installing optional packages (SNMP, mDNS)..."
+            eval $PKG_INSTALL net-snmp avahi-utils >/dev/null 2>&1 || print_warning "Optional packages (net-snmp, avahi-utils) not installed - some features may be limited"
+            ;;
+    esac
     
     print_success "Dependencies installed"
+}
+
+# Get default SSL paths based on distribution
+get_default_ssl_paths() {
+    case "$PKG_MANAGER" in
+        apt)
+            DEFAULT_SSL_CERT="/etc/ssl/certs/ssl-cert-snakeoil.pem"
+            DEFAULT_SSL_KEY="/etc/ssl/private/ssl-cert-snakeoil.key"
+            ;;
+        dnf|yum)
+            DEFAULT_SSL_CERT="/etc/pki/tls/certs/localhost.crt"
+            DEFAULT_SSL_KEY="/etc/pki/tls/private/localhost.key"
+            ;;
+        pacman)
+            DEFAULT_SSL_CERT="/etc/ssl/certs/ssl-cert-snakeoil.pem"
+            DEFAULT_SSL_KEY="/etc/ssl/private/ssl-cert-snakeoil.key"
+            ;;
+        zypper)
+            DEFAULT_SSL_CERT="/etc/ssl/certs/ssl-cert-snakeoil.pem"
+            DEFAULT_SSL_KEY="/etc/ssl/private/ssl-cert-snakeoil.key"
+            ;;
+        *)
+            DEFAULT_SSL_CERT="/etc/ssl/certs/ssl-cert-snakeoil.pem"
+            DEFAULT_SSL_KEY="/etc/ssl/private/ssl-cert-snakeoil.key"
+            ;;
+    esac
 }
 
 # Prompt for configuration
@@ -117,21 +229,24 @@ configure_dashboard() {
     read -p "$(echo -e ${CYAN}"Dashboard port [8089]: "${NC})" PORT
     PORT=${PORT:-8089}
     
+    # Get default SSL paths for this distribution
+    get_default_ssl_paths
+    
     # SSL
     read -p "$(echo -e ${CYAN}"Enable SSL/TLS? (Y/n): "${NC})" -n 1 SSL_ENABLED
     echo
     SSL_ENABLED=${SSL_ENABLED:-Y}
     if [[ $SSL_ENABLED =~ ^[Yy]$ ]]; then
         SSL_ENABLED="true"
-        read -p "$(echo -e ${CYAN}"SSL certificate path [/etc/ssl/certs/ssl-cert-snakeoil.pem]: "${NC})" SSL_CERT
-        SSL_CERT=${SSL_CERT:-/etc/ssl/certs/ssl-cert-snakeoil.pem}
+        read -p "$(echo -e ${CYAN}"SSL certificate path [$DEFAULT_SSL_CERT]: "${NC})" SSL_CERT
+        SSL_CERT=${SSL_CERT:-$DEFAULT_SSL_CERT}
         
-        read -p "$(echo -e ${CYAN}"SSL key path [/etc/ssl/private/ssl-cert-snakeoil.key]: "${NC})" SSL_KEY
-        SSL_KEY=${SSL_KEY:-/etc/ssl/private/ssl-cert-snakeoil.key}
+        read -p "$(echo -e ${CYAN}"SSL key path [$DEFAULT_SSL_KEY]: "${NC})" SSL_KEY
+        SSL_KEY=${SSL_KEY:-$DEFAULT_SSL_KEY}
     else
         SSL_ENABLED="false"
-        SSL_CERT="/etc/ssl/certs/ssl-cert-snakeoil.pem"
-        SSL_KEY="/etc/ssl/private/ssl-cert-snakeoil.key"
+        SSL_CERT="$DEFAULT_SSL_CERT"
+        SSL_KEY="$DEFAULT_SSL_KEY"
     fi
     
     # Kea configuration

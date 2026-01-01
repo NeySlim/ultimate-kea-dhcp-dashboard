@@ -1,0 +1,35 @@
+# Python Dependencies for Ultimate Kea Dashboard
+#
+# MÉTHODE RECOMMANDÉE : Utiliser les packages système
+# Cette méthode est préférée car elle évite les conflits avec pip et respecte
+# la politique PEP 668 (Debian 12+, Ubuntu 23.04+)
+#
+# Debian/Ubuntu:
+#   sudo apt install python3-psutil
+#
+# Fedora/RHEL/CentOS:
+#   sudo dnf install python3-psutil
+#
+# Arch/Manjaro:
+#   sudo pacman -S python-psutil
+#
+# openSUSE:
+#   sudo zypper install python3-psutil
+#
+# ============================================================================
+#
+# MÉTHODE ALTERNATIVE : pip (si packages système non disponibles)
+# Cette méthode peut nécessiter --break-system-packages sur distributions récentes
+#
+# Installation avec pip:
+#   pip3 install -r requirements.txt
+#
+# Sur Debian 12+/Ubuntu 23.04+ (PEP 668):
+#   pip3 install --break-system-packages -r requirements.txt
+# OU utiliser un environnement virtuel:
+#   python3 -m venv venv
+#   source venv/bin/activate
+#   pip install -r requirements.txt
+
+# Required for system metrics (CPU, RAM, Network, Disk)
+psutil>=5.8.0

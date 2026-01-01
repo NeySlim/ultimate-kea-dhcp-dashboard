@@ -41,10 +41,21 @@ A modern, real-time web dashboard for monitoring ISC Kea DHCP server leases, poo
 
 - Python 3.8+
 - ISC Kea DHCP Server
-- Linux system (Debian/Ubuntu recommended)
+- Linux system (multiple distributions supported)
 - Root or sudo access for network scanning
 
+### Supported Linux Distributions
+
+- **Debian/Ubuntu** (APT)
+- **Fedora/CentOS/RHEL/Rocky/AlmaLinux** (DNF/YUM)
+- **Arch/Manjaro** (Pacman)
+- **openSUSE/SLES** (Zypper)
+
+See [Supported Distributions](docs/DISTRIBUTIONS.md) for detailed compatibility information.
+
 ## Quick Installation
+
+The installer automatically detects your Linux distribution and configures the appropriate package manager.
 
 ### Method 1: Self-Extracting Installer (Recommended)
 
@@ -58,11 +69,12 @@ curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/m
 sudo bash installer.sh
 ```
 
-### Method 2: Clone and Install
+### Method 2: Direct Install Script
 
 ```bash
 # Download and run the installer
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh | sudo bash
+curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
+sudo bash install.sh
 ```
 
 ## Manual Installation
@@ -73,10 +85,58 @@ git clone https://github.com/NeySlim/ultimate-kea-dashboard.git
 cd ultimate-kea-dashboard
 ```
 
-2. Install dependencies:
+2. Install dependencies (distribution-specific):
+
+**Debian/Ubuntu:**
 ```bash
 sudo apt-get update
-sudo apt-get install -y python3 python3-pip nmap arping
+sudo apt-get install -y python3 python3-pip nmap arping net-tools python3-psutil
+# Optional for advanced features:
+sudo apt-get install -y snmp avahi-utils
+```
+
+**Fedora/RHEL/CentOS:**
+```bash
+sudo dnf install -y nmap iputils python3 python3-pip net-tools python3-psutil
+# Optional for advanced features:
+sudo dnf install -y net-snmp-utils avahi-tools
+```
+
+**Arch/Manjaro:**
+```bash
+sudo pacman -S nmap iputils python python-pip net-tools python-psutil
+# Optional for advanced features:
+sudo pacman -S net-snmp avahi
+sudo systemctl enable --now avahi-daemon
+```
+
+**openSUSE:**
+```bash
+sudo zypper install nmap iputils python3 python3-pip net-tools python3-psutil
+# Optional for advanced features:
+sudo zypper install net-snmp avahi-utils
+```
+
+**Note**: 
+- **psutil** is installed via system package manager (recommended method)
+- Using system packages avoids conflicts with pip and respects PEP 668
+- Optional packages enable SNMP queries and mDNS discovery
+- See [Dependencies](docs/DEPENDENCIES.md) for details
+
+3. Configure the dashboard:
+```bash
+sudo cp etc/ultimate-dashboard.conf.example etc/ultimate-dashboard.conf
+sudo nano etc/ultimate-dashboard.conf
+```
+
+4. Run the dashboard:
+```bash
+sudo python3 bin/ultimate-dashboard
+```
+
+Or install as a systemd service:
+```bash
+sudo ./install.sh
 ```
 
 3. Configure the dashboard:

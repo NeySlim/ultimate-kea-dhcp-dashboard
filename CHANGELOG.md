@@ -1,5 +1,59 @@
 # Changelog
 
+## [1.2.0] - 2026-01-01 - Multi-Distribution Support
+
+### Distribution Support
+- **ADDED**: Multi-distribution installer with automatic detection
+  - Debian/Ubuntu (APT)
+  - Fedora/CentOS/RHEL/Rocky/AlmaLinux (DNF/YUM)
+  - Arch/Manjaro (Pacman)
+  - openSUSE/SLES (Zypper)
+- **ADDED**: Automatic package manager detection and configuration
+- **ADDED**: Distribution-specific default SSL certificate paths
+- **IMPROVED**: Enhanced compatibility across Linux distributions
+
+### Dependencies
+- **ADDED**: Optional dependencies for advanced features
+  - SNMP utilities (snmp, net-snmp-utils, net-snmp)
+  - Avahi/mDNS tools (avahi-utils, avahi-tools, avahi)
+- **ADDED**: **psutil** installation via **system package managers** (python3-psutil, python-psutil)
+  - Debian/Ubuntu: python3-psutil
+  - Fedora/RHEL/CentOS: python3-psutil (via EPEL)
+  - Arch: python-psutil
+  - openSUSE: python3-psutil
+- **IMPROVED**: Use native packages instead of pip to respect PEP 668 and avoid conflicts
+- **ADDED**: Graceful degradation when optional packages are missing
+- **ADDED**: net-tools package for ARP command support
+- **IMPROVED**: Dependency installation with clear warnings for optional packages
+- **UPDATED**: requirements.txt with system package recommendations
+- **CREATED**: check-dependencies.sh script to verify all dependencies
+
+### Documentation
+- **ADDED**: Comprehensive distribution support documentation (`docs/DISTRIBUTIONS.md`)
+- **ADDED**: Fedora-specific installation guide (`docs/INSTALL-FEDORA.md`)
+- **ADDED**: Arch Linux-specific installation guide (`docs/INSTALL-ARCH.md`)
+- **ADDED**: Dependencies documentation (`docs/DEPENDENCIES.md`)
+- **ADDED**: Multi-distribution developer guide (`docs/MULTI-DISTRO-DEV.md`)
+- **UPDATED**: README.md with multi-distribution installation instructions
+- **ADDED**: Firewall configuration guides for different distributions
+- **ADDED**: SELinux configuration notes for RHEL-based systems
+
+### Installation Improvements
+- **ENHANCED**: `install.sh` now detects Linux distribution automatically
+- **ADDED**: Package manager abstraction layer
+- **ADDED**: Distribution-specific dependency installation
+- **IMPROVED**: SSL certificate path defaults based on distribution
+- **REMOVED**: Debian/Ubuntu-only restriction
+- **ADDED**: Warning messages for optional packages installation failures
+
+### Compatibility
+- **VERIFIED**: Standard Kea DHCP paths work across all distributions
+  - `/etc/kea/` for configuration
+  - `/var/lib/kea/` for leases
+  - `/run/kea/` for control socket
+- **VERIFIED**: FHS-compliant installation paths
+- **TESTED**: Command availability across distributions
+
 ## [1.1.0] - 2025-12-31 - Major Feature & UX Enhancements
 
 ### Configuration Simplification
