@@ -2950,20 +2950,41 @@ def generate_html(info, lang="fr"):
                 const tbody = table.querySelector('tbody');
                 const rows = Array.from(tbody.querySelectorAll('tr'));
                 
+                // Determine column name for special handling
+                const headers = Array.from(table.querySelectorAll('th[data-column]'));
+                let columnName = '';
+                if (headers[columnIndex]) {{
+                    columnName = headers[columnIndex].dataset.column;
+                }}
+                
                 rows.sort((a, b) => {{
                     const aVal = a.cells[columnIndex].textContent.trim();
                     const bVal = b.cells[columnIndex].textContent.trim();
                     
-                    // Try numeric sort first
-                    const aNum = parseFloat(aVal);
-                    const bNum = parseFloat(bVal);
-                    
                     let comparison = 0;
-                    if (!isNaN(aNum) && !isNaN(bNum)) {{
-                        comparison = aNum - bNum;
-                    }} else {{
-                        // String comparison
-                        comparison = aVal.localeCompare(bVal);
+                    
+                    // Special handling for IP addresses
+                    if (columnName === 'ip_address') {{
+                        const aIP = aVal.split('.').map(num => parseInt(num) || 0);
+                        const bIP = bVal.split('.').map(num => parseInt(num) || 0);
+                        for (let i = 0; i < 4; i++) {{
+                            if (aIP[i] !== bIP[i]) {{
+                                comparison = aIP[i] - bIP[i];
+                                break;
+                            }}
+                        }}
+                    }}
+                    // Try numeric sort first
+                    else {{
+                        const aNum = parseFloat(aVal);
+                        const bNum = parseFloat(bVal);
+                        
+                        if (!isNaN(aNum) && !isNaN(bNum)) {{
+                            comparison = aNum - bNum;
+                        }} else {{
+                            // String comparison
+                            comparison = aVal.localeCompare(bVal);
+                        }}
                     }}
                     
                     return direction === 'desc' ? -comparison : comparison;
