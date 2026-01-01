@@ -1,0 +1,80 @@
+post_install() {
+    # Create user if doesn't exist
+    if ! id ultimate-kea-dashboard &>/dev/null; then
+        useradd --system --home-dir /opt/ultimate-kea-dashboard --no-create-home \
+                --shell /usr/bin/nologin ultimate-kea-dashboard
+    fi
+    
+    # Set permissions
+    chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /opt/ultimate-kea-dashboard
+    chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /etc/ultimate-kea-dashboard
+    chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /var/log/ultimate-kea-dashboard
+    
+    # Install Python dependencies
+    cd /opt/ultimate-kea-dashboard
+    pip install -r requirements.txt >/dev/null 2>&1
+    
+    # Download OUI database if not present
+    if [ ! -f /opt/ultimate-kea-dashboard/data/oui.txt ]; then
+        curl -s -o /opt/ultimate-kea-dashboard/data/oui.txt \
+             http://standards-oui.ieee.org/oui/oui.txt || true
+    fi
+    
+    # Reload systemd
+    systemctl daemon-reload
+    
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║  Ultimate Kea Dashboard installed successfully!             ║"
+    echo "║                                                              ║"
+    echo "║  Enable and start with:                                      ║"
+    echo "║    systemctl enable --now ultimate-kea-dashboard            ║"
+    echo "║                                                              ║"
+    echo "║  Access at: http://your-server:8089                         ║"
+    echo "║                                                              ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+}
+
+post_upgrade() {
+    # Set permissions
+    chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /opt/ultimate-kea-dashboard
+    chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /etc/ultimate-kea-dashboard
+    
+    # Update Python dependencies
+    cd /opt/ultimate-kea-dashboard
+    pip install -r requirements.txt >/dev/null 2>&1
+    
+    # Reload systemd
+    systemctl daemon-reload
+    
+    # Restart service if running
+    if systemctl is-active --quiet ultimate-kea-dashboard; then
+        systemctl restart ultimate-kea-dashboard
+    fi
+    
+    echo ""
+    echo "Ultimate Kea Dashboard upgraded successfully!"
+    echo ""
+}
+
+pre_remove() {
+    # Stop and disable service
+    systemctl stop ultimate-kea-dashboard.service || true
+    systemctl disable ultimate-kea-dashboard.service || true
+}
+
+post_remove() {
+    # Remove user
+    if id ultimate-kea-dashboard &>/dev/null; then
+        userdel ultimate-kea-dashboard || true
+    fi
+    
+    # Remove logs
+    rm -rf /var/log/ultimate-kea-dashboard
+    
+    echo ""
+    echo "Ultimate Kea Dashboard removed."
+    echo "Configuration files remain in /etc/ultimate-kea-dashboard"
+    echo ""
+}

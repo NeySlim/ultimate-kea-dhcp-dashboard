@@ -60,6 +60,69 @@ def check_for_updates():
         'error': latest is None
     }
 
+def perform_update():
+    """Perform the dashboard update"""
+    try:
+        install_dir = Path('/opt/ultimate-kea-dashboard')
+        
+        # Check if git repo exists
+        if not (install_dir / '.git').exists():
+            return {
+                'success': False,
+                'error': True,
+                'message': 'Not a git repository. Manual update required.'
+            }
+        
+        # Perform git pull
+        result = subprocess.run(
+            ['git', 'pull'],
+            cwd=str(install_dir),
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if result.returncode != 0:
+            return {
+                'success': False,
+                'error': True,
+                'message': f'Git pull failed: {result.stderr}'
+            }
+        
+        # Restart service
+        restart_result = subprocess.run(
+            ['systemctl', 'restart', 'ultimate-kea-dashboard'],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
+        if restart_result.returncode != 0:
+            return {
+                'success': False,
+                'error': True,
+                'message': f'Service restart failed: {restart_result.stderr}'
+            }
+        
+        return {
+            'success': True,
+            'error': False,
+            'message': 'Update completed successfully. Dashboard is restarting...'
+        }
+        
+    except subprocess.TimeoutExpired:
+        return {
+            'success': False,
+            'error': True,
+            'message': 'Update timeout. Please try manually.'
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': True,
+            'message': f'Update failed: {str(e)}'
+        }
+
 if __name__ == '__main__':
     result = check_for_updates()
     print(json.dumps(result))

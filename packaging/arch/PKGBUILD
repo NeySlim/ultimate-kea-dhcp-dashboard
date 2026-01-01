@@ -1,0 +1,46 @@
+# Maintainer: NeySlim <neyslim@example.com>
+pkgname=ultimate-kea-dashboard
+pkgver=1.5.6
+pkgrel=1
+pkgdesc="Modern web dashboard for Kea DHCP Server"
+arch=('any')
+url="https://github.com/neyser/ultimate-kea-dashboard"
+license=('MIT')
+depends=(
+    'kea>=2.0.0'
+    'python>=3.8'
+    'python-pip'
+    'net-snmp'
+    'nmap'
+    'net-tools'
+    'iproute2'
+    'curl'
+    'sqlite'
+)
+optdepends=('kea-ctrl-agent: For enhanced Kea integration')
+backup=('etc/ultimate-kea-dashboard/config.json')
+install=${pkgname}.install
+source=("${pkgname}-${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+    cd "${srcdir}/${pkgname}-${pkgver}"
+    
+    # Create directories
+    install -dm755 "${pkgdir}/opt/ultimate-kea-dashboard"
+    install -dm755 "${pkgdir}/etc/ultimate-kea-dashboard"
+    install -dm755 "${pkgdir}/var/log/ultimate-kea-dashboard"
+    
+    # Copy application files
+    cp -r bin lib static data "${pkgdir}/opt/ultimate-kea-dashboard/"
+    install -Dm755 start.sh "${pkgdir}/opt/ultimate-kea-dashboard/start.sh"
+    install -Dm644 requirements.txt "${pkgdir}/opt/ultimate-kea-dashboard/requirements.txt"
+    install -Dm644 VERSION "${pkgdir}/opt/ultimate-kea-dashboard/VERSION"
+    
+    # Copy configuration
+    cp -r etc/* "${pkgdir}/etc/ultimate-kea-dashboard/"
+    
+    # Install systemd service
+    install -Dm644 etc/ultimate-kea-dashboard.service \
+                   "${pkgdir}/usr/lib/systemd/system/ultimate-kea-dashboard.service"
+}

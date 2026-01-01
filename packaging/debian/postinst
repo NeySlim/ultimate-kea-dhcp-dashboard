@@ -1,0 +1,52 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Create user if doesn't exist
+        if ! id -u ultimate-kea-dashboard >/dev/null 2>&1; then
+            useradd --system --home-dir /opt/ultimate-kea-dashboard --no-create-home \
+                    --shell /bin/false ultimate-kea-dashboard
+        fi
+        
+        # Set permissions
+        chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /opt/ultimate-kea-dashboard
+        chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /etc/ultimate-kea-dashboard
+        chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /var/log/ultimate-kea-dashboard
+        
+        # Install Python dependencies
+        cd /opt/ultimate-kea-dashboard
+        pip3 install --break-system-packages -r requirements.txt >/dev/null 2>&1 || \
+        pip3 install -r requirements.txt >/dev/null 2>&1
+        
+        # Download OUI database if not present
+        if [ ! -f /opt/ultimate-kea-dashboard/data/oui.txt ]; then
+            curl -s -o /opt/ultimate-kea-dashboard/data/oui.txt \
+                 http://standards-oui.ieee.org/oui/oui.txt || true
+        fi
+        
+        # Reload systemd
+        systemctl daemon-reload
+        
+        # Enable and start service
+        systemctl enable ultimate-kea-dashboard.service
+        systemctl start ultimate-kea-dashboard.service
+        
+        echo ""
+        echo "╔══════════════════════════════════════════════════════════════╗"
+        echo "║  Ultimate Kea Dashboard installed successfully!             ║"
+        echo "║                                                              ║"
+        echo "║  Access at: http://your-server:8089                         ║"
+        echo "║                                                              ║"
+        echo "║  Service commands:                                           ║"
+        echo "║    systemctl status ultimate-kea-dashboard                  ║"
+        echo "║    systemctl restart ultimate-kea-dashboard                 ║"
+        echo "║                                                              ║"
+        echo "╚══════════════════════════════════════════════════════════════╝"
+        echo ""
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

@@ -1,0 +1,25 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    remove)
+        # Stop and disable service
+        systemctl stop ultimate-kea-dashboard.service || true
+        systemctl disable ultimate-kea-dashboard.service || true
+        ;;
+    
+    purge)
+        # Remove user
+        if id -u ultimate-kea-dashboard >/dev/null 2>&1; then
+            userdel ultimate-kea-dashboard || true
+        fi
+        
+        # Remove logs and data
+        rm -rf /var/log/ultimate-kea-dashboard
+        rm -rf /opt/ultimate-kea-dashboard/data/*.db
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

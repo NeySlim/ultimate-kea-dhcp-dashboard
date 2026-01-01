@@ -1,0 +1,36 @@
+Source: ultimate-kea-dashboard
+Section: net
+Priority: optional
+Maintainer: NeySlim <neyslim@example.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.0
+Homepage: https://github.com/neyser/ultimate-kea-dashboard
+Vcs-Browser: https://github.com/neyser/ultimate-kea-dashboard
+Vcs-Git: https://github.com/neyser/ultimate-kea-dashboard.git
+
+Package: ultimate-kea-dashboard
+Architecture: all
+Depends: ${misc:Depends},
+         kea-dhcp4-server | isc-kea-dhcp4-server,
+         python3 (>= 3.8),
+         python3-pip,
+         snmp,
+         nmap,
+         net-tools,
+         iproute2,
+         curl,
+         sqlite3
+Recommends: kea-ctrl-agent
+Description: Modern web dashboard for Kea DHCP Server
+ Ultimate Kea Dashboard is a modern, responsive web-based dashboard
+ for monitoring and managing ISC Kea DHCP servers.
+ .
+ Features include:
+  - Real-time DHCP lease monitoring
+  - Network device scanning with SNMP support
+  - Service discovery (SSH, HTTP, HTTPS)
+  - MAC address vendor identification
+  - Multi-subnet support
+  - Automatic updates
+  - Customizable themes
+  - Multi-language support (EN/FR)

@@ -1,0 +1,32 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	# Create installation directories
+	mkdir -p debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard
+	mkdir -p debian/ultimate-kea-dashboard/etc/ultimate-kea-dashboard
+	mkdir -p debian/ultimate-kea-dashboard/etc/systemd/system
+	mkdir -p debian/ultimate-kea-dashboard/var/log/ultimate-kea-dashboard
+	
+	# Copy application files
+	cp -r bin lib static data debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/
+	cp start.sh requirements.txt VERSION debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/
+	
+	# Copy configuration
+	cp -r etc/* debian/ultimate-kea-dashboard/etc/ultimate-kea-dashboard/
+	
+	# Install systemd service
+	cp etc/ultimate-kea-dashboard.service debian/ultimate-kea-dashboard/etc/systemd/system/
+
+override_dh_auto_build:
+	# Nothing to build
+
+override_dh_auto_test:
+	# Skip tests
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod +x debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/start.sh
+	chmod +x debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/bin/*.py

@@ -990,6 +990,25 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                     'error_message': str(e)
                 }
                 self.wfile.write(json.dumps(error_response).encode())
+        elif parsed.path == "/api/perform-update":
+            # API endpoint to perform dashboard update
+            self.send_response(200)
+            self.send_header("Content-type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            
+            try:
+                sys.path.insert(0, str(SCRIPT_DIR / 'lib'))
+                from update_checker import perform_update
+                result = perform_update()
+                self.wfile.write(json.dumps(result).encode())
+            except Exception as e:
+                error_response = {
+                    'success': False,
+                    'error': True,
+                    'message': str(e)
+                }
+                self.wfile.write(json.dumps(error_response).encode())
         elif parsed.path == "/api/stats":
             # API endpoint for system stats
             self.send_response(200)
@@ -2576,7 +2595,7 @@ def generate_html(info, lang="fr"):
                             <span style="color:#d08770;">
                                 ⬆️ ${{t('update_available')}}: v${{data.current_version}} → v${{data.latest_version}}
                             </span>
-                            <button onclick="alert('La fonction de mise à jour automatique sera disponible prochainement. En attendant, utilisez: cd /opt/ultimate-kea-dashboard && git pull && systemctl restart ultimate-kea-dashboard')" 
+                            <button onclick="performUpdate()" 
                                     style="margin-left:10px;padding:3px 10px;border-radius:3px;background:#d08770;color:#fff;border:none;cursor:pointer;font-size:0.85em;">
                                 ${{t('update_button')}}
                             </button>
@@ -2596,6 +2615,52 @@ def generate_html(info, lang="fr"):
                         statusEl.style.background = 'transparent';
                         statusEl.style.border = 'none';
                     }}
+                }}
+            }}
+            
+            // Perform update function
+            async function performUpdate() {{
+                const statusEl = document.getElementById('updateStatus');
+                if (!statusEl) return;
+                
+                if (!confirm(t('update_confirm') || 'Êtes-vous sûr de vouloir mettre à jour le dashboard ? Le service sera redémarré.')) {{
+                    return;
+                }}
+                
+                // Show updating status
+                statusEl.innerHTML = `<span style="color:#d08770;">⏳ ${{t('updating') || 'Mise à jour en cours...'}}...</span>`;
+                statusEl.style.background = 'rgba(208, 135, 112, 0.1)';
+                statusEl.style.border = '1px solid #d08770';
+                
+                try {{
+                    const response = await fetch('/api/perform-update');
+                    const data = await response.json();
+                    
+                    if (data.success) {{
+                        statusEl.innerHTML = `<span style="color:#a3be8c;">✓ ${{t('update_success') || 'Mise à jour réussie'}}. ${{t('reloading') || 'Rechargement'}}...</span>`;
+                        statusEl.style.background = 'rgba(163, 190, 140, 0.1)';
+                        statusEl.style.border = '1px solid #a3be8c';
+                        
+                        // Wait 3 seconds then reload page
+                        setTimeout(() => {{
+                            window.location.reload();
+                        }}, 3000);
+                    }} else {{
+                        statusEl.innerHTML = `<span style="color:#bf616a;">❌ ${{t('update_failed') || 'Échec de la mise à jour'}}: ${{data.message}}</span>`;
+                        statusEl.style.background = 'rgba(191, 97, 106, 0.1)';
+                        statusEl.style.border = '1px solid #bf616a';
+                        
+                        // Restore update check after 5 seconds
+                        setTimeout(checkForUpdates, 5000);
+                    }}
+                }} catch (err) {{
+                    console.error('Update failed:', err);
+                    statusEl.innerHTML = `<span style="color:#bf616a;">❌ ${{t('update_failed') || 'Échec de la mise à jour'}}: ${{err.message}}</span>`;
+                    statusEl.style.background = 'rgba(191, 97, 106, 0.1)';
+                    statusEl.style.border = '1px solid #bf616a';
+                    
+                    // Restore update check after 5 seconds
+                    setTimeout(checkForUpdates, 5000);
                 }}
             }}
             

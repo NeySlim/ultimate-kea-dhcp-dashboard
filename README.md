@@ -61,25 +61,50 @@ See [Supported Distributions](docs/DISTRIBUTIONS.md) for detailed compatibility 
 
 ## Quick Installation
 
-The installer automatically detects your Linux distribution and configures the appropriate package manager.
+### Method 1: Distribution Packages (Recommended)
 
-### Method 1: Self-Extracting Installer (Recommended)
+Pre-built packages are available for major Linux distributions:
+
+**Debian/Ubuntu:**
+```bash
+# Download the latest .deb package from releases
+wget https://github.com/neyser/ultimate-kea-dashboard/releases/latest/download/ultimate-kea-dashboard_1.5.6-1_all.deb
+sudo dpkg -i ultimate-kea-dashboard_*.deb
+sudo apt-get install -f  # Install dependencies if needed
+```
+
+**Red Hat/Fedora/CentOS:**
+```bash
+# Download the latest .rpm package from releases
+wget https://github.com/neyser/ultimate-kea-dashboard/releases/latest/download/ultimate-kea-dashboard-1.5.6-1.noarch.rpm
+sudo dnf install ultimate-kea-dashboard-*.rpm
+```
+
+**Arch Linux:**
+```bash
+# Download the latest package from releases
+wget https://github.com/neyser/ultimate-kea-dashboard/releases/latest/download/ultimate-kea-dashboard-1.5.6-1-any.pkg.tar.zst
+sudo pacman -U ultimate-kea-dashboard-*.pkg.tar.zst
+```
+
+### Method 2: Self-Extracting Installer
 
 Download and run the single self-contained installer:
 
 ```bash
 # Download the installer
-curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/ultimate-kea-dashboard-installer.sh -o installer.sh
+curl -sL https://github.com/neyser/ultimate-kea-dashboard/releases/latest/download/ultimate-kea-dashboard-installer.sh -o installer.sh
 
 # Run it
 sudo bash installer.sh
 ```
 
-### Method 2: Direct Install Script
+### Method 3: Direct Install Script
 
 ```bash
-# Download and run the installer
-curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
+# Clone and install
+git clone https://github.com/neyser/ultimate-kea-dashboard.git
+cd ultimate-kea-dashboard
 sudo bash install.sh
 ```
 

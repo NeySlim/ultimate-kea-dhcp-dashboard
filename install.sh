@@ -161,7 +161,7 @@ install_dependencies() {
     
     case "$PKG_MANAGER" in
         apt)
-            eval $PKG_INSTALL nmap arping python3 python3-pip net-tools python3-psutil >/dev/null 2>&1
+            eval $PKG_INSTALL nmap arping python3 python3-pip net-tools python3-psutil curl jq git >/dev/null 2>&1
             # Optional packages for enhanced features
             print_info "Installing optional packages (SNMP, mDNS)..."
             eval $PKG_INSTALL snmp avahi-utils >/dev/null 2>&1 || print_warning "Optional packages (snmp, avahi-utils) not installed - some features may be limited"
@@ -171,19 +171,19 @@ install_dependencies() {
             if [[ "$DISTRO" == "centos" ]] || [[ "$DISTRO" == "rhel" ]] || [[ "$DISTRO" == "rocky" ]] || [[ "$DISTRO" == "almalinux" ]]; then
                 eval $PKG_INSTALL epel-release >/dev/null 2>&1 || true
             fi
-            eval $PKG_INSTALL nmap iputils python3 python3-pip net-tools python3-psutil >/dev/null 2>&1
+            eval $PKG_INSTALL nmap iputils python3 python3-pip net-tools python3-psutil curl jq git >/dev/null 2>&1
             # Optional packages
             print_info "Installing optional packages (SNMP, mDNS)..."
             eval $PKG_INSTALL net-snmp-utils avahi-tools >/dev/null 2>&1 || print_warning "Optional packages (net-snmp-utils, avahi-tools) not installed - some features may be limited"
             ;;
         pacman)
-            eval $PKG_INSTALL nmap iputils python python-pip net-tools python-psutil >/dev/null 2>&1
+            eval $PKG_INSTALL nmap iputils python python-pip net-tools python-psutil curl jq git >/dev/null 2>&1
             # Optional packages
             print_info "Installing optional packages (SNMP, mDNS)..."
             eval $PKG_INSTALL net-snmp avahi >/dev/null 2>&1 || print_warning "Optional packages (net-snmp, avahi) not installed - some features may be limited"
             ;;
         zypper)
-            eval $PKG_INSTALL nmap iputils python3 python3-pip net-tools python3-psutil >/dev/null 2>&1
+            eval $PKG_INSTALL nmap iputils python3 python3-pip net-tools python3-psutil curl jq git >/dev/null 2>&1
             # Optional packages
             print_info "Installing optional packages (SNMP, mDNS)..."
             eval $PKG_INSTALL net-snmp avahi-utils >/dev/null 2>&1 || print_warning "Optional packages (net-snmp, avahi-utils) not installed - some features may be limited"
