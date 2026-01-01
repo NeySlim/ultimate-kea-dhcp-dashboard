@@ -1,5 +1,9 @@
 # Installation sur Arch Linux
 
+> **Languages / Langues:** 🇬🇧 [English](INSTALL-ARCH.md) | 🇫🇷 [Français](INSTALL-ARCH.fr.md)
+
+---
+
 Guide d'installation spécifique pour Arch Linux et dérivés (Manjaro, EndeavourOS).
 
 ## Prérequis

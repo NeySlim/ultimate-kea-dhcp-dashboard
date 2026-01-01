@@ -1,5 +1,9 @@
 # Support Multi-Distribution
 
+> **Languages / Langues:** 🇬🇧 [English](README-MULTIDISTRO.en.md) _(in progress)_ | 🇫🇷 [Français](README-MULTIDISTRO.md)
+
+---
+
 Ultimate Kea DHCP Dashboard est maintenant compatible avec les principales distributions Linux !
 
 ## 🎯 Distributions Supportées

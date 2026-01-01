@@ -1,5 +1,9 @@
 # Installation sur Fedora
 
+> **Languages / Langues:** 🇬🇧 [English](INSTALL-FEDORA.md) | 🇫🇷 [Français](INSTALL-FEDORA.fr.md)
+
+---
+
 Guide d'installation spécifique pour Fedora Linux.
 
 ## Prérequis
