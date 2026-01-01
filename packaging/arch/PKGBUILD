@@ -1,6 +1,6 @@
 # Maintainer: NeySlim <neyslim@example.com>
 pkgname=ultimate-kea-dashboard
-pkgver=1.5.8
+pkgver=1.5.9
 pkgrel=1
 pkgdesc="Modern web dashboard for Kea DHCP Server"
 arch=('any')
