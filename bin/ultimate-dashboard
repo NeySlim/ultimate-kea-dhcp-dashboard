@@ -312,6 +312,7 @@ def network_scanner_thread():
                                     'mac': data.get('mac'),
                                     'vendor': data.get('vendor'),
                                     'snmp_info': data.get('snmp_info'),
+                                    'snmp_port_open': data.get('snmp_port_open', False),
                                     'alive': data.get('alive', False)
                                 }
                                 LAST_SCAN_TIME[ip] = time.time()
@@ -880,6 +881,7 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 device_copy['last_scan'] = last_scan
                 device_copy['icon_html'] = custom_svg if custom_svg else None
                 device_copy['snmp_info'] = enhanced.get('snmp_info')
+                device_copy['snmp_port_open'] = enhanced.get('snmp_port_open', False)
                 
                 static_devices.append(device_copy)
             
@@ -1110,6 +1112,7 @@ def generate_html(info, lang="fr"):
         
         # Add SNMP info display if available
         snmp_info = enhanced.get('snmp_info')
+        snmp_port_open = enhanced.get('snmp_port_open', False)
         snmp_display = ''
         if snmp_info and snmp_info.get('available'):
             snmp_parts = []
@@ -1123,10 +1126,10 @@ def generate_html(info, lang="fr"):
                 snmp_parts.append(f"<strong>{t.get('uptime', 'Uptime')}:</strong> {escape(snmp_info['sysUpTime'])}")
             
             if snmp_parts:
-                snmp_display = f'<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(0,255,0,0.1); border-left:3px solid #28a745; font-size:0.85em;"><div style="margin-bottom:3px; font-weight:600;">🔍 SNMP:</div>{"<br>".join(snmp_parts)}</div>'
-        elif config.get('enable_snmp', True) and is_static:
-            # Show SNMP? if SNMP is enabled but no info available yet
-            snmp_display = f'<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(128,128,128,0.1); border-left:3px solid #888; font-size:0.85em; font-weight:600;">🔍 SNMP?</div>'
+                snmp_display = f'<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(0,255,0,0.1); border-left:3px solid #28a745; font-size:0.85em;"><div style="margin-bottom:3px; font-weight:600;">📊 SNMP:</div>{"<br>".join(snmp_parts)}</div>'
+        elif config.get('enable_snmp', True) and is_static and snmp_port_open:
+            # Show SNMP? only if SNMP port is open but no info available yet
+            snmp_display = f'<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(128,128,128,0.1); border-left:3px solid #888; font-size:0.85em; font-weight:600;">📊 SNMP?</div>'
         
         scan_status_with_snmp = scan_status_with_btn + snmp_display
         
@@ -2496,8 +2499,20 @@ def generate_html(info, lang="fr"):
                 let html = '';
                 devices.forEach(device => {{
                     const typeBadge = `<span class="badge badge-${{device.type}}">${{t(device.type) || device.type}}</span>`;
-                    const iconSVG = getDeviceIconSVG(device.icon_name);
-                    const icon = iconSVG || device.device_icon || '🔧';
+                    
+                    // Build icon HTML - use custom SVG or icon_name for theme SVG
+                    let iconHtml = '';
+                    if (device.icon_html) {{
+                        iconHtml = `<td style="font-size: 1.3em; text-align: center;" title="${{device.device_type || 'Unknown'}}" class="device-icon-cell">${{device.icon_html}}</td>`;
+                    }} else {{
+                        const iconName = device.icon_name || 'unknown';
+                        const iconSVG = getDeviceIconSVG(iconName);
+                        if (iconSVG) {{
+                            iconHtml = `<td style="font-size: 1.3em; text-align: center;" title="${{device.device_type || 'Unknown'}}" class="device-icon-cell">${{iconSVG}}</td>`;
+                        }} else {{
+                            iconHtml = `<td style="font-size: 1.3em; text-align: center;" title="${{device.device_type || 'Unknown'}}" class="device-icon-cell">${{device.device_icon || '🔧'}}</td>`;
+                        }}
+                    }}
                     const ip = device.ip_address;
                     
                     // Build scan status (Static Devices - JavaScript)
@@ -2527,6 +2542,7 @@ def generate_html(info, lang="fr"):
                     
                     // Add SNMP info if available
                     let snmpDisplay = '';
+                    const snmpPortOpen = device.snmp_port_open || false;
                     if (device.snmp_info && device.snmp_info.available) {{
                         const snmp = device.snmp_info;
                         let snmpParts = [];
@@ -2537,14 +2553,15 @@ def generate_html(info, lang="fr"):
                         if (snmpParts.length > 0) {{
                             snmpDisplay = `<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(0,255,0,0.1); border-left:3px solid #28a745; font-size:0.85em;"><div style="margin-bottom:3px; font-weight:600;">📊 SNMP:</div>${{snmpParts.join('<br>')}}</div>`;
                         }}
-                    }} else {{
+                    }} else if (snmpPortOpen) {{
+                        // Only show SNMP? if the port is actually open
                         snmpDisplay = `<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(128,128,128,0.1); border-left:3px solid #888; font-size:0.85em; font-weight:600;">📊 SNMP?</div>`;
                     }}
                     
                     scanStatus = scanStatus + snmpDisplay;
                     
                     html += `<tr>
-                        <td style="font-size: 1.3em; text-align: center;" title="${{device.device_type || 'Unknown'}}">${{icon}}</td>
+                        ${{iconHtml}}
                         <td>${{typeBadge}}</td>
                         <td>${{device.ip_address}}</td>
                         <td>${{device.hostname || 'N/A'}}</td>

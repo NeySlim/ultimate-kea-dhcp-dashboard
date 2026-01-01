@@ -131,7 +131,8 @@ def scan_static_device_enhanced(ip, snmp_communities=None):
         'vendor': None,
         'services': [],
         'snmp_info': None,
-        'alive': False
+        'alive': False,
+        'snmp_port_open': False
     }
     
     data['alive'] = ping_host(ip)
@@ -149,15 +150,23 @@ def scan_static_device_enhanced(ip, snmp_communities=None):
     if hostname:
         data['hostname'] = hostname
     
-    # Try to get comprehensive SNMP info
-    snmp_info = get_snmp_system_info(ip, snmp_communities, timeout=1)
-    if snmp_info:
-        data['snmp_info'] = snmp_info
-        # Use SNMP hostname if we don't have one yet
-        if not data['hostname'] and snmp_info.get('sysName'):
-            data['hostname'] = snmp_info.get('sysName')
-    
+    # Scan for services first to detect if SNMP port is open
     data['services'] = scan_network_host(ip)
+    
+    # Check if SNMP port (161) is open
+    for svc in data['services']:
+        if '161/' in svc.get('port', ''):
+            data['snmp_port_open'] = True
+            break
+    
+    # Only try SNMP if port 161 is open
+    if data['snmp_port_open']:
+        snmp_info = get_snmp_system_info(ip, snmp_communities, timeout=1)
+        if snmp_info:
+            data['snmp_info'] = snmp_info
+            # Use SNMP hostname if we don't have one yet
+            if not data['hostname'] and snmp_info.get('sysName'):
+                data['hostname'] = snmp_info.get('sysName')
     
     return data
 
