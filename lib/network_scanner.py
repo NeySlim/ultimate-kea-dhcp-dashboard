@@ -118,13 +118,19 @@ def scan_network_host(ip, timeout=5):
         return []
 
 
-def scan_static_device_enhanced(ip, snmp_community="public"):
+def scan_static_device_enhanced(ip, snmp_communities=None):
     """Enhanced scan for static devices using multiple methods"""
+    if snmp_communities is None:
+        snmp_communities = ["public"]
+    elif isinstance(snmp_communities, str):
+        snmp_communities = [c.strip() for c in snmp_communities.split(',')]
+    
     data = {
         'hostname': None,
         'mac': None,
         'vendor': None,
         'services': [],
+        'snmp_info': None,
         'alive': False
     }
     
@@ -143,10 +149,13 @@ def scan_static_device_enhanced(ip, snmp_community="public"):
     if hostname:
         data['hostname'] = hostname
     
-    if not data['hostname']:
-        snmp_hostname = get_hostname_from_snmp(ip, snmp_community)
-        if snmp_hostname:
-            data['hostname'] = snmp_hostname
+    # Try to get comprehensive SNMP info
+    snmp_info = get_snmp_system_info(ip, snmp_communities, timeout=1)
+    if snmp_info:
+        data['snmp_info'] = snmp_info
+        # Use SNMP hostname if we don't have one yet
+        if not data['hostname'] and snmp_info.get('sysName'):
+            data['hostname'] = snmp_info.get('sysName')
     
     data['services'] = scan_network_host(ip)
     
@@ -170,4 +179,76 @@ def get_snmp_sysDescr(ip, community="public", timeout=1):
                         return line.split("STRING:")[-1].strip().strip('"')
     except Exception:
         pass
+    return None
+
+
+def get_snmp_system_info(ip, communities=None, timeout=1):
+    """
+    Get comprehensive SNMP system information from device
+    
+    Args:
+        ip: IP address to query
+        communities: List of SNMP communities to try (default: ["public"])
+        timeout: SNMP timeout in seconds
+    
+    Returns:
+        dict: System information or None if SNMP not available
+    """
+    if communities is None:
+        communities = ["public"]
+    elif isinstance(communities, str):
+        communities = [c.strip() for c in communities.split(',')]
+    
+    # OIDs to query
+    oids = {
+        'sysName': '1.3.6.1.2.1.1.5.0',       # System name
+        'sysDescr': '1.3.6.1.2.1.1.1.0',     # System description
+        'sysUpTime': '1.3.6.1.2.1.1.3.0',    # System uptime
+        'sysContact': '1.3.6.1.2.1.1.4.0',   # System contact
+        'sysLocation': '1.3.6.1.2.1.1.6.0',  # System location
+    }
+    
+    # Try each community until one works
+    for community in communities:
+        try:
+            # Build OID list for snmpget
+            oid_list = ' '.join(oids.values())
+            
+            result = subprocess.run(
+                ["snmpget", "-v2c", "-c", community, "-Oqv", "-t", str(timeout), ip] + list(oids.values()),
+                capture_output=True,
+                text=True,
+                timeout=timeout+2
+            )
+            
+            if result.returncode == 0 and result.stdout.strip():
+                lines = result.stdout.strip().split('\n')
+                
+                # Parse results
+                info = {
+                    'community': community,
+                    'available': True
+                }
+                
+                oid_keys = list(oids.keys())
+                for i, line in enumerate(lines):
+                    if i < len(oid_keys):
+                        value = line.strip().strip('"')
+                        # Skip "No Such Object" responses
+                        if value and "No Such Object" not in value and "No Such Instance" not in value:
+                            key = oid_keys[i]
+                            
+                            # Special handling for uptime
+                            if key == 'sysUpTime':
+                                info[key] = value
+                            else:
+                                info[key] = value
+                
+                # If we got at least one valid response, return it
+                if len(info) > 2:  # More than just community and available
+                    return info
+                    
+        except Exception:
+            continue
+    
     return None

@@ -39,7 +39,11 @@
     "no_static_devices": "Aucun dispositif statique trouvé",
     "reservation": "Réservation",
     "static": "Statique",
-    "no_service": "Aucun service"
+    "no_service": "Aucun service",
+    "system": "Système",
+    "contact": "Contact",
+    "location": "Localisation",
+    "uptime": "Uptime"
   },
   "en": {
     "title": "Pinet DHCP Dashboard",
@@ -81,7 +85,11 @@
     "no_static_devices": "No static devices found",
     "reservation": "Reservation",
     "static": "Static",
-    "no_service": "No service"
+    "no_service": "No service",
+    "system": "System",
+    "contact": "Contact",
+    "location": "Location",
+    "uptime": "Uptime"
   },
   "es": {
     "title": "Panel DHCP Pinet",
@@ -123,7 +131,11 @@
     "no_static_devices": "No se encontraron dispositivos estáticos",
     "reservation": "Reserva",
     "static": "Estático",
-    "no_service": "Ningún servicio"
+    "no_service": "Ningún servicio",
+    "system": "Sistema",
+    "contact": "Contacto",
+    "location": "Ubicación",
+    "uptime": "Tiempo de actividad"
   },
   "de": {
     "title": "Pinet DHCP Dashboard",
@@ -165,7 +177,11 @@
     "no_static_devices": "Keine statischen Geräte gefunden",
     "reservation": "Reservierung",
     "static": "Statisch",
-    "no_service": "Kein Dienst"
+    "no_service": "Kein Dienst",
+    "system": "System",
+    "contact": "Kontakt",
+    "location": "Standort",
+    "uptime": "Betriebszeit"
   },
   "th": {
     "title": "แดชบอร์ด DHCP Pinet",
@@ -207,6 +223,10 @@
     "no_static_devices": "ไม่พบอุปกรณ์คงที่",
     "reservation": "การจอง",
     "static": "คงที่",
-    "no_service": "ไม่มีบริการ"
+    "no_service": "ไม่มีบริการ",
+    "system": "ระบบ",
+    "contact": "ผู้ติดต่อ",
+    "location": "ที่ตั้ง",
+    "uptime": "เวลาทำงาน"
   }
 }

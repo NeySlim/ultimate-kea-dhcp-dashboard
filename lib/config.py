@@ -31,7 +31,7 @@ DEFAULT_CONFIG = {
     'mac_vendor_timeout': 2,
     'reverse_dns_timeout': 2,
     'enable_snmp': True,
-    'snmp_community': 'public',
+    'snmp_communities': ['public'],
     'snmp_timeout': 1,
     'enable_mdns': True,
     'mdns_timeout': 1,
@@ -109,7 +109,13 @@ def load_config():
             config['mac_vendor_timeout'] = section.getint('mac_vendor_timeout', fallback=config['mac_vendor_timeout'])
             config['reverse_dns_timeout'] = section.getint('reverse_dns_timeout', fallback=config['reverse_dns_timeout'])
             config['snmp_timeout'] = section.getint('snmp_timeout', fallback=config['snmp_timeout'])
-            config['snmp_community'] = section.get('snmp_community', fallback=config['snmp_community'])
+            
+            # Parse SNMP communities (comma-separated list)
+            communities_str = section.get('snmp_communities', fallback=None)
+            if not communities_str:
+                communities_str = section.get('snmp_community', fallback='public')
+            config['snmp_communities'] = [c.strip() for c in communities_str.split(',')]
+            
             config['mdns_timeout'] = section.getint('mdns_timeout', fallback=config['mdns_timeout'])
             
             print("[INFO] Configuration loaded successfully")

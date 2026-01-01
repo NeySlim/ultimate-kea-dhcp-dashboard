@@ -32,6 +32,7 @@ from network_scanner import (
     scan_network_host, 
     scan_static_device_enhanced,
     get_snmp_sysDescr,
+    get_snmp_system_info,
     ping_host
 )
 from device_detection import get_device_type, format_service_link, SERVICE_ICONS
@@ -59,7 +60,7 @@ DEFAULT_CONFIG = {
     'mac_vendor_timeout': 2,
     'reverse_dns_timeout': 2,
     'enable_snmp': True,
-    'snmp_community': 'public',
+    'snmp_communities': ['public'],
     'snmp_timeout': 1,
     'enable_mdns': True,
     'mdns_timeout': 1,
@@ -172,18 +173,24 @@ def get_device_info_async(ip, hostname, vendor, mac):
     
     # Fetch in parallel
     with ThreadPoolExecutor(max_workers=2) as executor:
-        snmp_future = executor.submit(get_snmp_sysDescr, ip) if config['enable_snmp'] else None
-        mdns_future = executor.submit(get_mdns_info, hostname) if config['enable_mdns'] else None
+        snmp_future = executor.submit(
+            get_snmp_system_info, 
+            ip, 
+            config.get('snmp_communities', ['public']), 
+            config.get('snmp_timeout', 1)
+        ) if config.get('enable_snmp', False) else None
+        
+        mdns_future = executor.submit(get_mdns_info, hostname) if config.get('enable_mdns', False) else None
         
         if snmp_future:
             try:
-                info["snmp"] = snmp_future.result(timeout=config['snmp_timeout'])
+                info["snmp"] = snmp_future.result(timeout=config.get('snmp_timeout', 1) + 2)
             except:
                 pass
         
         if mdns_future:
             try:
-                info["mdns"] = mdns_future.result(timeout=config['mdns_timeout'])
+                info["mdns"] = mdns_future.result(timeout=config.get('mdns_timeout', 1))
             except:
                 pass
     
@@ -278,7 +285,8 @@ def network_scanner_thread():
                 
                 # Parallel enhanced scan of static hosts
                 with ThreadPoolExecutor(max_workers=10) as executor:
-                    future_to_ip = {executor.submit(scan_static_device_enhanced, ip): ip for ip in static_ips_to_scan}
+                    snmp_communities = config.get('snmp_communities', ['public'])
+                    future_to_ip = {executor.submit(scan_static_device_enhanced, ip, snmp_communities): ip for ip in static_ips_to_scan}
                     
                     for future in as_completed(future_to_ip):
                         ip = future_to_ip[future]
@@ -287,17 +295,19 @@ def network_scanner_thread():
                             with CACHE_LOCK:
                                 # Store services in regular cache
                                 NETWORK_SCAN_RESULTS[ip] = data.get('services', [])
-                                # Store enhanced data separately
+                                # Store enhanced data separately (including SNMP info)
                                 STATIC_DEVICE_ENHANCED_DATA[ip] = {
                                     'hostname': data.get('hostname'),
                                     'mac': data.get('mac'),
                                     'vendor': data.get('vendor'),
+                                    'snmp_info': data.get('snmp_info'),
                                     'alive': data.get('alive', False)
                                 }
                                 LAST_SCAN_TIME[ip] = time.time()
                                 SCAN_IN_PROGRESS[ip] = False
                             if data.get('alive'):
-                                print(f"[INFO] {ip}: hostname={data.get('hostname', 'N/A')}, MAC={data.get('mac', 'N/A')}, services={len(data.get('services', []))}")
+                                snmp_str = " SNMP✓" if data.get('snmp_info') else ""
+                                print(f"[INFO] {ip}: hostname={data.get('hostname', 'N/A')}, MAC={data.get('mac', 'N/A')}, services={len(data.get('services', []))}{snmp_str}")
                         except Exception as e:
                             print(f"[WARN] {ip}: enhanced scan failed - {e}")
                             with CACHE_LOCK:
@@ -1082,6 +1092,25 @@ def generate_html(info, lang="fr"):
         pause_btn = f'<button class="pauseIndividualBtn" data-ip="{ip}" title="Pause/Resume scan"><span class="pause-icon">⏸️</span></button>'
         scan_status_with_btn = f'{pause_btn}{scan_status}{countdown_display}'
         
+        # Add SNMP info display if available
+        snmp_info = enhanced.get('snmp_info')
+        snmp_display = ''
+        if snmp_info and snmp_info.get('available'):
+            snmp_parts = []
+            if snmp_info.get('sysDescr'):
+                snmp_parts.append(f"<strong>{t.get('system', 'System')}:</strong> {escape(snmp_info['sysDescr'][:80])}" + ("..." if len(snmp_info['sysDescr']) > 80 else ""))
+            if snmp_info.get('sysContact'):
+                snmp_parts.append(f"<strong>{t.get('contact', 'Contact')}:</strong> {escape(snmp_info['sysContact'])}")
+            if snmp_info.get('sysLocation'):
+                snmp_parts.append(f"<strong>{t.get('location', 'Location')}:</strong> {escape(snmp_info['sysLocation'])}")
+            if snmp_info.get('sysUpTime'):
+                snmp_parts.append(f"<strong>{t.get('uptime', 'Uptime')}:</strong> {escape(snmp_info['sysUpTime'])}")
+            
+            if snmp_parts:
+                snmp_display = f'<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(0,255,0,0.1); border-left:3px solid #28a745; font-size:0.8em;"><div style="margin-bottom:3px;"><strong>📡 SNMP</strong></div>{"<br>".join(snmp_parts)}</div>'
+        
+        scan_status_with_snmp = scan_status_with_btn + snmp_display
+        
         # Get scanned services
         services_html = ""
         if services:
@@ -1109,7 +1138,7 @@ def generate_html(info, lang="fr"):
             <td>{hostname}</td>
             <td>{escape(hw_address)}</td>
             <td>{vendor}</td>
-            <td style="font-size: 0.85em;">{scan_status_with_btn}</td>
+            <td style="font-size: 0.85em;">{scan_status_with_snmp}</td>
             <td style="font-size: 0.9em;">{services_col}</td>
             <td>{escape(device.get('subnet', 'N/A'))}</td>
         </tr>

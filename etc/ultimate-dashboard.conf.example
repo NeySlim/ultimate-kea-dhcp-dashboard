@@ -17,8 +17,10 @@ scan_threads = 50
 scan_timeout = 0.5
 
 # SNMP configuration (optional)
-snmp_community = public
-snmp_enabled = false
+# Comma-separated list of SNMP communities to try
+snmp_communities = public,home
+snmp_enabled = true
+snmp_timeout = 1
 
 # Language
 language = fr
