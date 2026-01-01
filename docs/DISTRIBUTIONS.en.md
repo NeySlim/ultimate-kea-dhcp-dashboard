@@ -59,7 +59,7 @@ The installer automatically detects your distribution and uses the appropriate p
 
 ```bash
 # Download and run the installer
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
 sudo bash install.sh
 ```
 
@@ -67,7 +67,7 @@ Or with the self-extracting installer:
 
 ```bash
 # Download the installer
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/ultimate-kea-dashboard-installer.sh -o installer.sh
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/ultimate-kea-dashboard-installer.sh -o installer.sh
 
 # Run it
 sudo bash installer.sh
@@ -213,7 +213,7 @@ sudo systemctl restart ultimate-dashboard
 
 ### Distribution Not Detected
 If your distribution is not automatically detected, please open an issue at:
-https://github.com/NeySlim/ultimate-kea-dashboard/issues
+https://github.com/username/ultimate-kea-dashboard/issues
 
 Include the output of:
 ```bash

@@ -16,7 +16,7 @@ Guide d'installation spécifique pour Arch Linux et dérivés (Manjaro, Endeavou
 
 ```bash
 # Télécharger l'installateur
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
 
 # Exécuter l'installation
 sudo bash install.sh
@@ -52,7 +52,7 @@ Le dashboard fonctionne sans ces paquets mais avec moins de fonctionnalités. Vo
 ### 2. Cloner le dépôt
 
 ```bash
-git clone https://github.com/NeySlim/ultimate-kea-dashboard.git
+git clone https://github.com/username/ultimate-kea-dashboard.git
 cd ultimate-kea-dashboard
 ```
 
@@ -426,4 +426,4 @@ Pour plus d'informations sur la configuration réseau et systemd :
 
 ## Support
 
-Pour les problèmes spécifiques à Arch : https://github.com/NeySlim/ultimate-kea-dashboard/issues
+Pour les problèmes spécifiques à Arch : https://github.com/username/ultimate-kea-dashboard/issues

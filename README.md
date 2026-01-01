@@ -69,7 +69,7 @@ Download and run the single self-contained installer:
 
 ```bash
 # Download the installer
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/ultimate-kea-dashboard-installer.sh -o installer.sh
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/ultimate-kea-dashboard-installer.sh -o installer.sh
 
 # Run it
 sudo bash installer.sh
@@ -79,7 +79,7 @@ sudo bash installer.sh
 
 ```bash
 # Download and run the installer
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
 sudo bash install.sh
 ```
 
@@ -87,7 +87,7 @@ sudo bash install.sh
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/NeySlim/ultimate-kea-dashboard.git
+git clone https://github.com/username/ultimate-kea-dashboard.git
 cd ultimate-kea-dashboard
 ```
 
@@ -294,7 +294,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## Author
 
-Created and maintained by NeySlim.
+Created and maintained by username.
 
 ## Acknowledgments
 

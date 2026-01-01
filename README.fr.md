@@ -69,7 +69,7 @@ Téléchargez et exécutez l'installateur autonome :
 
 ```bash
 # Télécharger l'installateur
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/ultimate-kea-dashboard-installer.sh -o installer.sh
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/ultimate-kea-dashboard-installer.sh -o installer.sh
 
 # L'exécuter
 sudo bash installer.sh
@@ -79,7 +79,7 @@ sudo bash installer.sh
 
 ```bash
 # Télécharger et exécuter l'installateur
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
 sudo bash install.sh
 ```
 
@@ -87,7 +87,7 @@ sudo bash install.sh
 
 1. Cloner le dépôt :
 ```bash
-git clone https://github.com/NeySlim/ultimate-kea-dashboard.git
+git clone https://github.com/username/ultimate-kea-dashboard.git
 cd ultimate-kea-dashboard
 ```
 
@@ -299,7 +299,7 @@ Ce projet est sous licence MIT - voir le fichier [LICENSE](LICENSE) pour les dé
 
 ## Auteur
 
-**NeySlim**
+**username**
 
 ## Remerciements
 
@@ -315,13 +315,13 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique détaillé des versions.
 ## Support
 
 - 📝 [Documentation](docs/)
-- 🐛 [Issues](https://github.com/NeySlim/ultimate-kea-dashboard/issues)
-- 💬 [Discussions](https://github.com/NeySlim/ultimate-kea-dashboard/discussions)
+- 🐛 [Issues](https://github.com/username/ultimate-kea-dashboard/issues)
+- 💬 [Discussions](https://github.com/username/ultimate-kea-dashboard/discussions)
 
 ---
 
 **Installable en une commande sur 15+ distributions Linux !** 🚀
 
 ```bash
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh | sudo bash
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh | sudo bash
 ```

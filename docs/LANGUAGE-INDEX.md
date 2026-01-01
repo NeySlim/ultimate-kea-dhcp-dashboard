@@ -34,7 +34,7 @@
 ### 🇬🇧 English
 ```bash
 # Download installer
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
 
 # Run (auto-detects your distribution)
 sudo bash install.sh
@@ -43,7 +43,7 @@ sudo bash install.sh
 ### 🇫🇷 Français
 ```bash
 # Télécharger l'installateur
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
 
 # Exécuter (détecte automatiquement votre distribution)
 sudo bash install.sh

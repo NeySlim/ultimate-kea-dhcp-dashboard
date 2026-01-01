@@ -7,7 +7,7 @@ cat > "$OUTPUT" << 'HEADER'
 #!/bin/bash
 #
 # Ultimate Kea DHCP Dashboard - Self-Extracting Installer
-# https://github.com/NeySlim/ultimate-kea-dashboard
+# https://github.com/username/ultimate-kea-dashboard
 #
 # This is a self-contained installer that extracts and installs the dashboard.
 # Usage: bash ultimate-kea-dashboard-installer.sh

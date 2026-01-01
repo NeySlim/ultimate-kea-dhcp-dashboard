@@ -10,7 +10,7 @@ Specific installation guide for Fedora, RHEL, CentOS, Rocky Linux, and AlmaLinux
 
 ```bash
 # Download the installer
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
 
 # Run (automatically detects Fedora/RHEL and uses DNF/YUM)
 sudo bash install.sh

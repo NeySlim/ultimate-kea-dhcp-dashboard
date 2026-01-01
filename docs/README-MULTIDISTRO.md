@@ -37,7 +37,7 @@ L'installateur détecte automatiquement votre distribution :
 
 ```bash
 # Télécharger et exécuter
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
 sudo bash install.sh
 ```
 
@@ -240,7 +240,7 @@ Votre distribution n'est pas supportée ? Contribuez !
 
 ## 📞 Support
 
-- **Issues GitHub** : https://github.com/NeySlim/ultimate-kea-dashboard/issues
+- **Issues GitHub** : https://github.com/username/ultimate-kea-dashboard/issues
 - **Documentation** : Voir les guides dans `docs/`
 - **Tests** : Utilisez `test-distro-detection.sh` pour vérifier la détection
 

@@ -10,7 +10,7 @@ Specific installation guide for Arch Linux, Manjaro, and EndeavourOS.
 
 ```bash
 # Download the installer
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
 
 # Run (automatically detects Arch and uses Pacman)
 sudo bash install.sh

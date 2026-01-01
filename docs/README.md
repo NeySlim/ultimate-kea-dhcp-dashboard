@@ -40,12 +40,12 @@
 
 **English:**
 ```bash
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh | sudo bash
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh | sudo bash
 ```
 
 **Français:**
 ```bash
-curl -sL https://raw.githubusercontent.com/NeySlim/ultimate-kea-dhcp-dashboard/main/install.sh | sudo bash
+curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh | sudo bash
 ```
 
 ### 🧪 Dependency Check / Vérification des Dépendances

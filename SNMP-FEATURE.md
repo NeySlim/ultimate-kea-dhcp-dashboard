@@ -58,7 +58,7 @@ SNMP information is displayed in the dashboard under the "Scan Status" column fo
 ```python
 from network_scanner import get_snmp_system_info
 
-info = get_snmp_system_info('192.168.1.1', ['public', 'home'], timeout=1)
+info = get_snmp_system_info('10.0.0.1', ['public', 'home'], timeout=1)
 if info and info.get('available'):
     print(f"System: {info.get('sysDescr')}")
     print(f"Uptime: {info.get('sysUpTime')}")
