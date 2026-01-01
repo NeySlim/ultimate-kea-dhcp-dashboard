@@ -98,6 +98,20 @@ THEMES = {
         "accent_primary": "#1f6feb",
         "accent_secondary": "#388bfd",
         "scrollbar": "#30363d"
+    },
+    "vicuna": {
+        "bg_primary": "#2b2520",
+        "bg_secondary": "#3d3530",
+        "text_primary": "#f5e6d3",
+        "text_secondary": "#d4c5b0",
+        "border": "#5a4a3f",
+        "success": "#8fbc8f",
+        "info": "#7db3d1",
+        "warning": "#e89f4f",
+        "error": "#d9534f",
+        "accent_primary": "#d97536",
+        "accent_secondary": "#c56426",
+        "scrollbar": "#5a4a3f"
     }
 }
 
