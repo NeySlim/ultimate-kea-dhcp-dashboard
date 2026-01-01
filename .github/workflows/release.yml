@@ -14,10 +14,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
+      - name: Generate installer
+        run: |
+          chmod +x create-installer.sh
+          ./create-installer.sh
+      
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
+            ultimate-kea-dashboard-installer.sh
             install.sh
             README.md
           draft: false
