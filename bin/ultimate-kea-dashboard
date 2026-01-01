@@ -553,7 +553,9 @@ def get_non_pool_ips_and_reservations():
             all_ips = list(network.hosts())
             
             # Get IPs from ARP cache to find active devices
+            # Also track failed/incomplete IPs to exclude them
             arp_ips = set()
+            failed_ips = set()
             try:
                 result = subprocess.run(
                     ["ip", "neigh", "show"],
@@ -563,16 +565,19 @@ def get_non_pool_ips_and_reservations():
                 )
                 if result.returncode == 0:
                     for line in result.stdout.split('\n'):
-                        # Skip incomplete/failed ARP entries
-                        line_upper = line.upper()
-                        if 'INCOMPLETE' in line_upper or 'FAILED' in line_upper:
-                            continue
-                        
                         parts = line.split()
                         if len(parts) > 0 and parts[0]:
                             try:
                                 ip_obj = ipaddress.ip_address(parts[0])
-                                if ip_obj in network:
+                                if ip_obj not in network:
+                                    continue
+                                
+                                # Track failed/incomplete IPs
+                                line_upper = line.upper()
+                                if 'INCOMPLETE' in line_upper or 'FAILED' in line_upper:
+                                    failed_ips.add(ip_obj)
+                                else:
+                                    # Only add successful ARP entries
                                     arp_ips.add(ip_obj)
                             except:
                                 pass
@@ -586,6 +591,9 @@ def get_non_pool_ips_and_reservations():
             else:
                 # For small subnets, scan all
                 ips_to_check = set(all_ips) | arp_ips
+            
+            # Remove IPs that failed ARP resolution
+            ips_to_check = ips_to_check - failed_ips
             
             for ip in ips_to_check:
                 # Check if IP is in any pool
