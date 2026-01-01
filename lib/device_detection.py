@@ -1,5 +1,7 @@
 """Device type detection and classification"""
 
+import custom_devices
+
 
 SERVICE_ICONS = {
     '22': ('🔑', 'SSH'),
@@ -65,11 +67,10 @@ def get_device_type(hostname, vendor, mac, device_info=None):
         if device_info.get("mdns"):
             combined += f" {device_info['mdns'].lower()}"
     
-    # Custom Gaming PCs (check FIRST before generic patterns)
-    if "marvin" in h:
-        return ("🎮", "Gaming PC", "gaming-pc")
-    if "shepard" in h:
-        return ("🎮", "Gaming PC", "gaming-pc")
+    # Check custom devices FIRST (from custom-devices.json)
+    custom_type = custom_devices.get_device_type_info(hostname, vendor, mac)
+    if custom_type:
+        return custom_type
     
     # Cameras
     if any(x in combined for x in ["dafang", "camera", "webcam", "hikvision", "dahua", "reolink", "wyze", "ring", "doorbell", "video", "ipcam", "cam-"]):

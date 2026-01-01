@@ -1,0 +1,26 @@
+{
+  "custom_devices": [
+    {
+      "hostname": "marvin",
+      "type": "gaming-pc",
+      "emoji": "🎮",
+      "label": "Gaming PC Maître",
+      "description": "PC Gaming puissant avec setup RGB et écran large",
+      "icon_theme": "master"
+    },
+    {
+      "hostname": "shepard",
+      "type": "gaming-pc",
+      "emoji": "🎮",
+      "label": "Gaming PC Apprenti",
+      "description": "Mini PC gaming compact",
+      "icon_theme": "apprentice"
+    }
+  ],
+  "device_types": {
+    "gaming-pc": {
+      "emoji": "🎮",
+      "default_label": "Gaming PC"
+    }
+  }
+}
