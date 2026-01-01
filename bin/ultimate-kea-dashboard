@@ -2760,6 +2760,11 @@ def generate_html(info, lang="fr"):
                 
                 startRefreshCycle();
                 
+                // Check for software updates on page load
+                checkForUpdates();
+                
+                // Set interval to check for updates every hour
+                setInterval(checkForUpdates, 3600000); // 3600000ms = 1 hour
                 
                 // Initialize system monitoring gauges (loaded from external file)
                 initGauges(themes, settings);
