@@ -2300,8 +2300,15 @@ def generate_html(info, lang="fr"):
                 if (saved) {{
                     try {{
                         const loadedSettings = JSON.parse(saved);
-                        // Merge with current settings
-                        settings = {{ ...settings, ...loadedSettings }};
+                        // Merge with current settings, ensuring sortState has all tables
+                        settings = {{ 
+                            ...settings, 
+                            ...loadedSettings,
+                            sortState: {{
+                                ...settings.sortState,
+                                ...(loadedSettings.sortState || {{}})
+                            }}
+                        }};
                         console.log('Loaded settings:', settings);
                     }} catch(e) {{
                         console.error('Failed to load settings:', e);
@@ -2909,6 +2916,11 @@ def generate_html(info, lang="fr"):
                     const headers = table.querySelectorAll('th');
                     headers.forEach((header, index) => {{
                         header.addEventListener('click', () => {{
+                            // Ensure sortState exists for this table
+                            if (!settings.sortState[tableId]) {{
+                                settings.sortState[tableId] = {{ column: null, direction: 'asc' }};
+                            }}
+                            
                             const currentSort = settings.sortState[tableId];
                             let direction = 'asc';
                             
