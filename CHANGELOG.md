@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.5.4] - 2026-01-01 - Static Devices Filtering
+## [1.5.5] - 2026-01-01 - Static Devices Filtering
 
 ### Improvements
 - **IMPROVED**: Static devices table now only shows devices that respond
@@ -22,13 +22,12 @@
 
 ---
 
-## [2.5.3] - 2026-01-01 - Static Devices Detection Enhancement
+## [1.5.4] - 2026-01-01 - Static Devices Detection Enhancement
 
 ### Improvements
 - **IMPROVED**: Static devices detection now includes ARP cache discovery
   - Changed from scanning only first/last 10 IPs to first/last 50 + ARP cache
   - Automatically detects all active devices outside DHCP pools
-  - Devices like 192.168.1.133 (pve.lan.pew.pet) now properly detected
   - More efficient scanning strategy for large subnets
 
 ### Technical Details
@@ -39,7 +38,7 @@
 
 ---
 
-## [2.5.2] - 2026-01-01 - SNMP Display Fix
+## [1.5.3] - 2026-01-01 - SNMP Display Fix
 
 ### Bug Fixes
 - **FIXED**: SNMP information not displaying in web interface
