@@ -931,6 +931,27 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
             self.wfile.write(json.dumps(data).encode())
+        elif parsed.path == "/api/update-status":
+            # API endpoint for update checker
+            self.send_response(200)
+            self.send_header("Content-type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            
+            try:
+                sys.path.insert(0, str(SCRIPT_DIR / 'lib'))
+                from update_checker import check_for_updates
+                update_info = check_for_updates()
+                self.wfile.write(json.dumps(update_info).encode())
+            except Exception as e:
+                error_response = {
+                    'current_version': 'unknown',
+                    'latest_version': 'unknown',
+                    'update_available': False,
+                    'error': True,
+                    'error_message': str(e)
+                }
+                self.wfile.write(json.dumps(error_response).encode())
         elif parsed.path == "/api/stats":
             # API endpoint for system stats
             self.send_response(200)
@@ -1872,7 +1893,15 @@ def generate_html(info, lang="fr"):
             // Client-side translations
             const translations = {{
                 fr: {{
-                    last_update: "Dernière mise à jour",
+                    last_update: "Dernier rafraîchissement",
+                    update_status: "État du logiciel",
+                    update_available: "Mise à jour disponible",
+                    up_to_date: "À jour",
+                    checking_updates: "Vérification...",
+                    update_button: "Mettre à jour",
+                    current_version: "Version actuelle",
+                    latest_version: "Dernière version",
+                    update_error: "Erreur de vérification",
                     scan_active: "Scan réseau actif",
                     scan_paused: "Scan réseau en pause",
                     resume_scan: "Reprendre le scan",
@@ -1891,7 +1920,15 @@ def generate_html(info, lang="fr"):
                     no_static_devices: "Aucun dispositif statique trouvé"
                 }},
                 en: {{
-                    last_update: "Last update",
+                    last_update: "Last refresh",
+                    update_status: "Software status",
+                    update_available: "Update available",
+                    up_to_date: "Up to date",
+                    checking_updates: "Checking...",
+                    update_button: "Update now",
+                    current_version: "Current version",
+                    latest_version: "Latest version",
+                    update_error: "Check error",
                     scan_active: "Network scan active",
                     scan_paused: "Network scan paused",
                     resume_scan: "Resume scan",
@@ -1911,6 +1948,11 @@ def generate_html(info, lang="fr"):
                 }},
                 es: {{
                     last_update: "Última actualización",
+                    update_status: "Estado del software",
+                    update_available: "Actualización disponible",
+                    up_to_date: "Actualizado",
+                    checking_updates: "Verificando...",
+                    update_button: "Actualizar",
                     scan_active: "Escaneo de red activo",
                     scan_paused: "Escaneo de red en pausa",
                     resume_scan: "Reanudar escaneo",
@@ -1924,6 +1966,11 @@ def generate_html(info, lang="fr"):
                 }},
                 de: {{
                     last_update: "Letzte Aktualisierung",
+                    update_status: "Software-Status",
+                    update_available: "Update verfügbar",
+                    up_to_date: "Aktuell",
+                    checking_updates: "Prüfen...",
+                    update_button: "Aktualisieren",
                     scan_active: "Netzwerk-Scan aktiv",
                     scan_paused: "Netzwerk-Scan pausiert",
                     resume_scan: "Scan fortsetzen",
@@ -1936,7 +1983,12 @@ def generate_html(info, lang="fr"):
                     never_scanned: "Nie gescannt"
                 }},
                 th: {{
-                    last_update: "อัปเดตล่าสุด",
+                    last_update: "รีเฟรชล่าสุด",
+                    update_status: "สถานะซอฟต์แวร์",
+                    update_available: "มีอัปเดต",
+                    up_to_date: "ทันสมัย",
+                    checking_updates: "กำลังตรวจสอบ...",
+                    update_button: "อัปเดตเลย",
                     scan_active: "สแกนเครือข่ายทำงาน",
                     scan_paused: "สแกนเครือข่ายหยุดชั่วคราว",
                     resume_scan: "ดำเนินการสแกนต่อ",
@@ -2363,6 +2415,47 @@ def generate_html(info, lang="fr"):
                         }}
                     }})
                     .catch(err => console.log('Update error:', err));
+            }}
+            
+            // Check for updates function
+            async function checkForUpdates() {{
+                try {{
+                    const response = await fetch('/api/update-status');
+                    const data = await response.json();
+                    
+                    const statusEl = document.getElementById('updateStatus');
+                    if (!statusEl) return;
+                    
+                    if (data.error) {{
+                        statusEl.innerHTML = `<span style="color:#888;">⚠️ ${{t('update_error')}}</span>`;
+                        statusEl.style.background = 'transparent';
+                        statusEl.style.border = 'none';
+                    }} else if (data.update_available) {{
+                        statusEl.innerHTML = `
+                            <span style="color:#d08770;">
+                                ⬆️ ${{t('update_available')}}: v${{data.current_version}} → v${{data.latest_version}}
+                            </span>
+                            <button onclick="alert('La fonction de mise à jour automatique sera disponible prochainement. En attendant, utilisez: cd /opt/ultimate-kea-dashboard && git pull && systemctl restart ultimate-kea-dashboard')" 
+                                    style="margin-left:10px;padding:3px 10px;border-radius:3px;background:#d08770;color:#fff;border:none;cursor:pointer;font-size:0.85em;">
+                                ${{t('update_button')}}
+                            </button>
+                        `;
+                        statusEl.style.background = 'rgba(208, 135, 112, 0.1)';
+                        statusEl.style.border = '1px solid #d08770';
+                    }} else {{
+                        statusEl.innerHTML = `<span style="color:#a3be8c;">✓ ${{t('up_to_date')}} (v${{data.current_version}})</span>`;
+                        statusEl.style.background = 'rgba(163, 190, 140, 0.1)';
+                        statusEl.style.border = '1px solid #a3be8c';
+                    }}
+                }} catch (err) {{
+                    console.error('Update check failed:', err);
+                    const statusEl = document.getElementById('updateStatus');
+                    if (statusEl) {{
+                        statusEl.innerHTML = `<span style="color:#888;">⚠️ ${{t('update_error')}}</span>`;
+                        statusEl.style.background = 'transparent';
+                        statusEl.style.border = 'none';
+                    }}
+                }}
             }}
             
             // Save paused IPs to settings
