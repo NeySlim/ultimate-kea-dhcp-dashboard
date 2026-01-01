@@ -65,6 +65,12 @@ def get_device_type(hostname, vendor, mac, device_info=None):
         if device_info.get("mdns"):
             combined += f" {device_info['mdns'].lower()}"
     
+    # Custom Gaming PCs (check FIRST before generic patterns)
+    if "marvin" in h:
+        return ("🎮", "Gaming PC", "gaming-pc")
+    if "shepard" in h:
+        return ("🎮", "Gaming PC", "gaming-pc")
+    
     # Cameras
     if any(x in combined for x in ["dafang", "camera", "webcam", "hikvision", "dahua", "reolink", "wyze", "ring", "doorbell", "video", "ipcam", "cam-"]):
         return ("📷", "Camera", "camera")
