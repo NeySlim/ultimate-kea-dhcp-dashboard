@@ -1,9 +1,5 @@
 # Supported Linux Distributions
 
-> **Languages / Langues:** 🇬🇧 [English](DISTRIBUTIONS.md) | 🇫🇷 [Français](DISTRIBUTIONS.fr.md) _(in progress)_
-
----
-
 Ultimate Kea DHCP Dashboard supports multiple Linux distributions with automatic detection and configuration.
 
 ## Officially Supported Distributions

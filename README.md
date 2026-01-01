@@ -1,5 +1,9 @@
 # Ultimate Kea DHCP Dashboard
 
+> **Languages / Langues:** [🇬🇧 English](README.md) | [🇫🇷 Français](README.fr.md)
+
+---
+
 A modern, real-time web dashboard for monitoring ISC Kea DHCP server leases, pools, and network devices with advanced scanning capabilities and system metrics visualization.
 
 ![Dashboard Screenshot](docs/images/dashboard-screenshot.png)
