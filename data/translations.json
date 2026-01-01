@@ -1,7 +1,7 @@
 {
   "fr": {
     "title": "Tableau de bord DHCP Pinet",
-    "last_update": "Dernière mise à jour",
+    "last_update": "Dernier rafraîchissement",
     "refresh": "Rafraîchir",
     "scan_status": "Scan réseau en cours...",
     "next_refresh": "Prochain rafraîchissement dans",
@@ -43,11 +43,17 @@
     "system": "Système",
     "contact": "Contact",
     "location": "Localisation",
-    "uptime": "Uptime"
+    "uptime": "Uptime",
+    "update_status": "État du logiciel",
+    "update_available": "Mise à jour disponible",
+    "up_to_date": "À jour",
+    "checking_updates": "Vérification...",
+    "update_button": "Mettre à jour",
+    "update_error": "Erreur de vérification"
   },
   "en": {
     "title": "Pinet DHCP Dashboard",
-    "last_update": "Last update",
+    "last_update": "Last refresh",
     "refresh": "Refresh",
     "scan_status": "Network scan in progress...",
     "next_refresh": "Next refresh in",
@@ -89,7 +95,13 @@
     "system": "System",
     "contact": "Contact",
     "location": "Location",
-    "uptime": "Uptime"
+    "uptime": "Uptime",
+    "update_status": "Software status",
+    "update_available": "Update available",
+    "up_to_date": "Up to date",
+    "checking_updates": "Checking...",
+    "update_button": "Update now",
+    "update_error": "Check error"
   },
   "es": {
     "title": "Panel DHCP Pinet",
@@ -135,7 +147,13 @@
     "system": "Sistema",
     "contact": "Contacto",
     "location": "Ubicación",
-    "uptime": "Tiempo de actividad"
+    "uptime": "Tiempo de actividad",
+    "update_status": "Estado del software",
+    "update_available": "Actualización disponible",
+    "up_to_date": "Actualizado",
+    "checking_updates": "Verificando...",
+    "update_button": "Actualizar",
+    "update_error": "Error de verificación"
   },
   "de": {
     "title": "Pinet DHCP Dashboard",
@@ -181,11 +199,17 @@
     "system": "System",
     "contact": "Kontakt",
     "location": "Standort",
-    "uptime": "Betriebszeit"
+    "uptime": "Betriebszeit",
+    "update_status": "Software-Status",
+    "update_available": "Update verfügbar",
+    "up_to_date": "Aktuell",
+    "checking_updates": "Prüfen...",
+    "update_button": "Aktualisieren",
+    "update_error": "Prüffehler"
   },
   "th": {
     "title": "แดชบอร์ด DHCP Pinet",
-    "last_update": "อัปเดตล่าสุด",
+    "last_update": "รีเฟรชล่าสุด",
     "refresh": "รีเฟรช",
     "scan_status": "กำลังสแกนเครือข่าย...",
     "next_refresh": "รีเฟรชครั้งถัดไปใน",
@@ -227,6 +251,12 @@
     "system": "ระบบ",
     "contact": "ผู้ติดต่อ",
     "location": "ที่ตั้ง",
-    "uptime": "เวลาทำงาน"
+    "uptime": "เวลาทำงาน",
+    "update_status": "สถานะซอฟต์แวร์",
+    "update_available": "มีอัปเดต",
+    "up_to_date": "ทันสมัย",
+    "checking_updates": "กำลังตรวจสอบ...",
+    "update_button": "อัปเดตเลย",
+    "update_error": "ข้อผิดพลาด"
   }
 }
