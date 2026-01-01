@@ -913,16 +913,9 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 device_copy['icon_html'] = custom_svg if custom_svg else None
                 device_copy['snmp_info'] = enhanced.get('snmp_info')
                 
-                # Only include devices that have responded (have MAC, services, or valid hostname)
-                # This filters out IPs that don't respond or don't exist
-                has_mac = device_copy.get('hw_address') and device_copy['hw_address'] not in ['', None]
-                has_services = len(services) > 0
-                has_hostname = device_copy.get('hostname') not in ['N/A', None, '']
-                is_reservation = device_copy.get('type') == 'reservation'
-                
-                # Include if: it's a reservation OR it has responded (MAC/services/hostname)
-                if is_reservation or has_mac or has_services or has_hostname:
-                    static_devices.append(device_copy)
+                # Always include all static devices and reservations
+                # Display them immediately, even if scan is pending/in progress
+                static_devices.append(device_copy)
             
             data = {
                 'pools': info.get('pools', []),
