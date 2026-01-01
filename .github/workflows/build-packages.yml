@@ -32,12 +32,14 @@ jobs:
           VERSION=$(cat VERSION)
           cd ../ultimate-kea-dashboard-${VERSION}
           dpkg-buildpackage -us -uc -b
+          # Move built package back to workspace
+          mv ../*.deb $GITHUB_WORKSPACE/
       
       - name: Upload DEB artifact
         uses: actions/upload-artifact@v4
         with:
           name: deb-package
-          path: ../*.deb
+          path: "*.deb"
 
   build-rpm:
     name: Build RPM Package
@@ -70,12 +72,14 @@ jobs:
         run: |
           cd ~/rpmbuild/SPECS
           rpmbuild -bb ultimate-kea-dashboard.spec
+          # Move built package to workspace
+          cp ~/rpmbuild/RPMS/noarch/*.rpm $GITHUB_WORKSPACE/
       
       - name: Upload RPM artifact
         uses: actions/upload-artifact@v4
         with:
           name: rpm-package
-          path: ~/rpmbuild/RPMS/noarch/*.rpm
+          path: "*.rpm"
 
   build-arch:
     name: Build Arch Linux Package
@@ -110,12 +114,14 @@ jobs:
       - name: Build Arch package
         run: |
           su - builder -c "cd ${GITHUB_WORKSPACE} && makepkg -s --noconfirm"
+          # Ensure proper permissions
+          chown root:root *.pkg.tar.zst
       
       - name: Upload Arch artifact
         uses: actions/upload-artifact@v4
         with:
           name: arch-package
-          path: ./*.pkg.tar.zst
+          path: "*.pkg.tar.zst"
 
   create-release:
     name: Create GitHub Release
