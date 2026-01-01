@@ -19,7 +19,7 @@ BOLD='\033[1m'
 
 # Installation paths
 INSTALL_DIR="/opt/ultimate-kea-dashboard"
-CONFIG_DIR="/etc/ultimate-dashboard"
+CONFIG_DIR="/etc/ultimate-kea-dashboard"
 SYSTEMD_DIR="/etc/systemd/system"
 
 # Print colored header
@@ -297,7 +297,7 @@ install_files() {
     cp -r data/* "$INSTALL_DIR/data/"
     cp start.sh "$INSTALL_DIR/"
     
-    chmod +x "$INSTALL_DIR/bin/ultimate-dashboard"
+    chmod +x "$INSTALL_DIR/bin/ultimate-kea-dashboard"
     chmod +x "$INSTALL_DIR/start.sh"
     
     print_success "Files installed to $INSTALL_DIR"
@@ -307,7 +307,7 @@ install_files() {
 create_config() {
     print_section "Creating Configuration"
     
-    cat > "$CONFIG_DIR/ultimate-dashboard.conf" <<EOF
+    cat > "$CONFIG_DIR/ultimate-kea-dashboard.conf" <<EOF
 [DEFAULT]
 # Dashboard server configuration
 port = $PORT
@@ -336,19 +336,19 @@ snmp_enabled = false
 language = $LANGUAGE
 EOF
     
-    chmod 600 "$CONFIG_DIR/ultimate-dashboard.conf"
+    chmod 600 "$CONFIG_DIR/ultimate-kea-dashboard.conf"
     
     # Create symlink for compatibility
-    ln -sf "$CONFIG_DIR/ultimate-dashboard.conf" "$INSTALL_DIR/etc/ultimate-dashboard.conf"
+    ln -sf "$CONFIG_DIR/ultimate-kea-dashboard.conf" "$INSTALL_DIR/etc/ultimate-kea-dashboard.conf"
     
-    print_success "Configuration created at $CONFIG_DIR/ultimate-dashboard.conf"
+    print_success "Configuration created at $CONFIG_DIR/ultimate-kea-dashboard.conf"
 }
 
 # Create systemd service
 create_systemd_service() {
     print_section "Creating Systemd Service"
     
-    cat > "$SYSTEMD_DIR/ultimate-dashboard.service" <<EOF
+    cat > "$SYSTEMD_DIR/ultimate-kea-dashboard.service" <<EOF
 [Unit]
 Description=Ultimate Kea DHCP Dashboard
 After=network.target kea-dhcp4.service
@@ -357,7 +357,7 @@ After=network.target kea-dhcp4.service
 Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR
-ExecStart=/usr/bin/python3 $INSTALL_DIR/bin/ultimate-dashboard
+ExecStart=/usr/bin/python3 $INSTALL_DIR/bin/ultimate-kea-dashboard
 Restart=always
 RestartSec=10
 
@@ -374,16 +374,16 @@ EOF
 start_service() {
     print_section "Starting Service"
     
-    systemctl enable ultimate-dashboard.service
-    systemctl start ultimate-dashboard.service
+    systemctl enable ultimate-kea-dashboard.service
+    systemctl start ultimate-kea-dashboard.service
     
     sleep 2
     
-    if systemctl is-active --quiet ultimate-dashboard.service; then
+    if systemctl is-active --quiet ultimate-kea-dashboard.service; then
         print_success "Service started successfully"
     else
         print_error "Service failed to start"
-        print_info "Check logs with: journalctl -u ultimate-dashboard -f"
+        print_info "Check logs with: journalctl -u ultimate-kea-dashboard -f"
         exit 1
     fi
 }
@@ -407,10 +407,10 @@ print_completion() {
     fi
     
     echo -e "\n${BOLD}Useful commands:${NC}"
-    echo -e "  ${YELLOW}sudo systemctl status ultimate-dashboard${NC}  - Check service status"
-    echo -e "  ${YELLOW}sudo systemctl restart ultimate-dashboard${NC} - Restart service"
-    echo -e "  ${YELLOW}sudo journalctl -u ultimate-dashboard -f${NC} - View logs"
-    echo -e "  ${YELLOW}sudo nano $CONFIG_DIR/ultimate-dashboard.conf${NC} - Edit configuration"
+    echo -e "  ${YELLOW}sudo systemctl status ultimate-kea-dashboard${NC}  - Check service status"
+    echo -e "  ${YELLOW}sudo systemctl restart ultimate-kea-dashboard${NC} - Restart service"
+    echo -e "  ${YELLOW}sudo journalctl -u ultimate-kea-dashboard -f${NC} - View logs"
+    echo -e "  ${YELLOW}sudo nano $CONFIG_DIR/ultimate-kea-dashboard.conf${NC} - Edit configuration"
     
     echo -e "\n${GREEN}Enjoy your Ultimate Kea DHCP Dashboard!${NC}\n"
 }

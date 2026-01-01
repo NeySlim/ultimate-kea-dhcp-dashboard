@@ -2,7 +2,7 @@
 # Start Ultimate Dashboard
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DASHBOARD_BIN="$SCRIPT_DIR/bin/ultimate-dashboard"
+DASHBOARD_BIN="$SCRIPT_DIR/bin/ultimate-kea-dashboard"
 
 if [ ! -f "$DASHBOARD_BIN" ]; then
     echo "Error: Dashboard script not found at $DASHBOARD_BIN"

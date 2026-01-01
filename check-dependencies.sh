@@ -119,6 +119,6 @@ if [ $MISSING_REQUIRED -gt 0 ]; then
     exit 1
 else
     echo -e "${GREEN}Système prêt !${NC}"
-    echo -e "Vous pouvez démarrer le dashboard avec : ${YELLOW}sudo systemctl start ultimate-dashboard${NC}"
+    echo -e "Vous pouvez démarrer le dashboard avec : ${YELLOW}sudo systemctl start ultimate-kea-dashboard${NC}"
     exit 0
 fi

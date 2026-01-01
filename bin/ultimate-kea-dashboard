@@ -42,10 +42,10 @@ import custom_devices
 
 # Default configuration
 CONFIG_PATHS = [
-    str(SCRIPT_DIR / 'etc' / 'ultimate-dashboard.conf'),
-    '/etc/ultimate-dashboard/ultimate-dashboard.conf',
-    './ultimate-dashboard.conf',
-    '/opt/ultimate-dashboard/etc/ultimate-dashboard.conf',
+    str(SCRIPT_DIR / 'etc' / 'ultimate-kea-dashboard.conf'),
+    '/etc/ultimate-kea-dashboard/ultimate-kea-dashboard.conf',
+    './ultimate-kea-dashboard.conf',
+    '/opt/ultimate-kea-dashboard/etc/ultimate-kea-dashboard.conf',
 ]
 
 DEFAULT_CONFIG = {
@@ -312,7 +312,6 @@ def network_scanner_thread():
                                     'mac': data.get('mac'),
                                     'vendor': data.get('vendor'),
                                     'snmp_info': data.get('snmp_info'),
-                                    'snmp_port_open': data.get('snmp_port_open', False),
                                     'alive': data.get('alive', False)
                                 }
                                 LAST_SCAN_TIME[ip] = time.time()
@@ -881,7 +880,6 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 device_copy['last_scan'] = last_scan
                 device_copy['icon_html'] = custom_svg if custom_svg else None
                 device_copy['snmp_info'] = enhanced.get('snmp_info')
-                device_copy['snmp_port_open'] = enhanced.get('snmp_port_open', False)
                 
                 static_devices.append(device_copy)
             
@@ -1021,9 +1019,30 @@ def generate_html(info, lang="fr"):
                 port = svc['port']
                 service = svc['service']
                 service_link = format_service_link(ip, port, service)
-                services_html += f"<li>{service_link}</li>"
+                services_html += service_link  # service_link already includes <li> tags
+        
+        # Add SNMP info display if available - in services column
+        snmp_info = lease.get('snmp_info')
+        snmp_display = ''
+        if snmp_info and snmp_info.get('available'):
+            snmp_parts = []
+            if snmp_info.get('sysDescr'):
+                snmp_parts.append(f"<strong>{t.get('system', 'System')}:</strong> {escape(snmp_info['sysDescr'][:80])}" + ("..." if len(snmp_info['sysDescr']) > 80 else ""))
+            if snmp_info.get('sysContact'):
+                snmp_parts.append(f"<strong>{t.get('contact', 'Contact')}:</strong> {escape(snmp_info['sysContact'])}")
+            if snmp_info.get('sysLocation'):
+                snmp_parts.append(f"<strong>{t.get('location', 'Location')}:</strong> {escape(snmp_info['sysLocation'])}")
+            if snmp_info.get('sysUpTime'):
+                snmp_parts.append(f"<strong>{t.get('uptime', 'Uptime')}:</strong> {escape(snmp_info['sysUpTime'])}")
+            
+            if snmp_parts:
+                snmp_display = f'<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(0,255,0,0.1); border-left:3px solid #28a745; font-size:0.85em;"><div style="margin-bottom:3px; font-weight:600;">📊 SNMP:</div>{"<br>".join(snmp_parts)}</div>'
+        elif config.get('enable_snmp', True) and any(svc.get('port') == 161 for svc in services):
+            # Show SNMP? only if port 161 is open
+            snmp_display = f'<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(128,128,128,0.1); border-left:3px solid #888; font-size:0.85em; font-weight:600;">📊 SNMP?</div>'
         
         services_col = f"<ul style='margin:0;padding-left:20px;'>{services_html}</ul>" if services_html else f"<em class='no-service'>{t['no_service']}</em>"
+        services_col += snmp_display
         
         # Get icon - use custom SVG if available, otherwise use icon_name for theme SVG
         icon_html_custom = lease.get("icon_html")
@@ -1110,9 +1129,17 @@ def generate_html(info, lang="fr"):
         pause_btn = f'<button class="pauseIndividualBtn" data-ip="{ip}" title="Pause/Resume scan"><span class="pause-icon">⏸️</span></button>'
         scan_status_with_btn = f'{pause_btn}{scan_status}{countdown_display}'
         
-        # Add SNMP info display if available
+        # Get scanned services
+        services_html = ""
+        if services:
+            for svc in services:
+                port = svc['port']
+                service = svc['service']
+                service_link = format_service_link(ip, port, service)
+                services_html += service_link  # service_link already includes <li> tags
+        
+        # Add SNMP info display if available - in services column
         snmp_info = enhanced.get('snmp_info')
-        snmp_port_open = enhanced.get('snmp_port_open', False)
         snmp_display = ''
         if snmp_info and snmp_info.get('available'):
             snmp_parts = []
@@ -1127,22 +1154,12 @@ def generate_html(info, lang="fr"):
             
             if snmp_parts:
                 snmp_display = f'<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(0,255,0,0.1); border-left:3px solid #28a745; font-size:0.85em;"><div style="margin-bottom:3px; font-weight:600;">📊 SNMP:</div>{"<br>".join(snmp_parts)}</div>'
-        elif config.get('enable_snmp', True) and is_static and snmp_port_open:
-            # Show SNMP? only if SNMP port is open but no info available yet
+        elif config.get('enable_snmp', True) and is_static and any(svc.get('port') == 161 for svc in services):
+            # Show SNMP? only if port 161 is open
             snmp_display = f'<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(128,128,128,0.1); border-left:3px solid #888; font-size:0.85em; font-weight:600;">📊 SNMP?</div>'
         
-        scan_status_with_snmp = scan_status_with_btn + snmp_display
-        
-        # Get scanned services
-        services_html = ""
-        if services:
-            for svc in services:
-                port = svc['port']
-                service = svc['service']
-                service_link = format_service_link(ip, port, service)
-                services_html += f"<li>{service_link}</li>"
-        
         services_col = f"<ul style='margin:0;padding-left:20px;'>{services_html}</ul>" if services_html else f"<em class='no-service'>{t['no_service']}</em>"
+        services_col += snmp_display
         
         # Get icon - use custom SVG if available, otherwise use icon_name for theme SVG
         icon_html_custom = device.get("icon_html")
@@ -1160,7 +1177,7 @@ def generate_html(info, lang="fr"):
             <td>{hostname}</td>
             <td>{escape(hw_address)}</td>
             <td>{vendor}</td>
-            <td style="font-size: 0.85em;">{scan_status_with_snmp}</td>
+            <td style="font-size: 0.85em;">{scan_status_with_btn}</td>
             <td style="font-size: 0.9em;">{services_col}</td>
             <td>{escape(device.get('subnet', 'N/A'))}</td>
         </tr>
@@ -2467,6 +2484,29 @@ def generate_html(info, lang="fr"):
                         servicesCol = `<em class="no-service">${{t('no_service')}}</em>`;
                     }}
                     
+                    // Add SNMP info if available - check if port 161 is open
+                    let snmpDisplay = '';
+                    const hasSnmpPort = lease.services_html && lease.services_html.some(s => s.includes('161/'));
+                    
+                    if (lease.snmp_info && lease.snmp_info.available) {{
+                        const snmp = lease.snmp_info;
+                        let snmpParts = [];
+                        if (snmp.sysDescr) {{
+                            const desc = snmp.sysDescr.length > 80 ? snmp.sysDescr.substring(0, 80) + '...' : snmp.sysDescr;
+                            snmpParts.push(`<strong>${{t('system')}}:</strong> ${{desc}}`);
+                        }}
+                        if (snmp.sysContact) snmpParts.push(`<strong>${{t('contact')}}:</strong> ${{snmp.sysContact}}`);
+                        if (snmp.sysLocation) snmpParts.push(`<strong>${{t('location')}}:</strong> ${{snmp.sysLocation}}`);
+                        if (snmp.sysUpTime) snmpParts.push(`<strong>${{t('uptime')}}:</strong> ${{snmp.sysUpTime}}`);
+                        if (snmpParts.length > 0) {{
+                            snmpDisplay = `<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(0,255,0,0.1); border-left:3px solid #28a745; font-size:0.85em;"><div style="margin-bottom:3px; font-weight:600;">📊 SNMP:</div>${{snmpParts.join('<br>')}}</div>`;
+                        }}
+                    }} else if (hasSnmpPort) {{
+                        snmpDisplay = `<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(128,128,128,0.1); border-left:3px solid #888; font-size:0.85em; font-weight:600;">📊 SNMP?</div>`;
+                    }}
+                    
+                    servicesCol = servicesCol + snmpDisplay;
+                    
                     html += `<tr class="${{stateClass}}">
                         <td style="font-size: 1.3em; text-align: center;" title="${{lease.device_type || 'Unknown'}}">${{icon}}</td>
                         <td>${{lease.ip_address}}</td>
@@ -2499,20 +2539,8 @@ def generate_html(info, lang="fr"):
                 let html = '';
                 devices.forEach(device => {{
                     const typeBadge = `<span class="badge badge-${{device.type}}">${{t(device.type) || device.type}}</span>`;
-                    
-                    // Build icon HTML - use custom SVG or icon_name for theme SVG
-                    let iconHtml = '';
-                    if (device.icon_html) {{
-                        iconHtml = `<td style="font-size: 1.3em; text-align: center;" title="${{device.device_type || 'Unknown'}}" class="device-icon-cell">${{device.icon_html}}</td>`;
-                    }} else {{
-                        const iconName = device.icon_name || 'unknown';
-                        const iconSVG = getDeviceIconSVG(iconName);
-                        if (iconSVG) {{
-                            iconHtml = `<td style="font-size: 1.3em; text-align: center;" title="${{device.device_type || 'Unknown'}}" class="device-icon-cell">${{iconSVG}}</td>`;
-                        }} else {{
-                            iconHtml = `<td style="font-size: 1.3em; text-align: center;" title="${{device.device_type || 'Unknown'}}" class="device-icon-cell">${{device.device_icon || '🔧'}}</td>`;
-                        }}
-                    }}
+                    const iconSVG = getDeviceIconSVG(device.icon_name);
+                    const icon = iconSVG || device.device_icon || '🔧';
                     const ip = device.ip_address;
                     
                     // Build scan status (Static Devices - JavaScript)
@@ -2540,28 +2568,31 @@ def generate_html(info, lang="fr"):
                         servicesCol = `<em class="no-service">${{t('no_service')}}</em>`;
                     }}
                     
-                    // Add SNMP info if available
+                    // Add SNMP info if available - check if port 161 is open
                     let snmpDisplay = '';
-                    const snmpPortOpen = device.snmp_port_open || false;
+                    const hasSnmpPort = device.services_html && device.services_html.some(s => s.includes('161/'));
+                    
                     if (device.snmp_info && device.snmp_info.available) {{
                         const snmp = device.snmp_info;
                         let snmpParts = [];
-                        if (snmp.sysName) snmpParts.push(`<strong>${{t('name')}}:</strong> ${{snmp.sysName}}`);
-                        if (snmp.sysDescr) snmpParts.push(`<strong>${{t('description')}}:</strong> ${{snmp.sysDescr}}`);
+                        if (snmp.sysDescr) {{
+                            const desc = snmp.sysDescr.length > 80 ? snmp.sysDescr.substring(0, 80) + '...' : snmp.sysDescr;
+                            snmpParts.push(`<strong>${{t('system')}}:</strong> ${{desc}}`);
+                        }}
+                        if (snmp.sysContact) snmpParts.push(`<strong>${{t('contact')}}:</strong> ${{snmp.sysContact}}`);
                         if (snmp.sysLocation) snmpParts.push(`<strong>${{t('location')}}:</strong> ${{snmp.sysLocation}}`);
                         if (snmp.sysUpTime) snmpParts.push(`<strong>${{t('uptime')}}:</strong> ${{snmp.sysUpTime}}`);
                         if (snmpParts.length > 0) {{
                             snmpDisplay = `<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(0,255,0,0.1); border-left:3px solid #28a745; font-size:0.85em;"><div style="margin-bottom:3px; font-weight:600;">📊 SNMP:</div>${{snmpParts.join('<br>')}}</div>`;
                         }}
-                    }} else if (snmpPortOpen) {{
-                        // Only show SNMP? if the port is actually open
+                    }} else if (hasSnmpPort) {{
                         snmpDisplay = `<div class="snmp-info" style="margin-top:5px; padding:5px; background:rgba(128,128,128,0.1); border-left:3px solid #888; font-size:0.85em; font-weight:600;">📊 SNMP?</div>`;
                     }}
                     
-                    scanStatus = scanStatus + snmpDisplay;
+                    servicesCol = servicesCol + snmpDisplay;
                     
                     html += `<tr>
-                        ${{iconHtml}}
+                        <td style="font-size: 1.3em; text-align: center;" title="${{device.device_type || 'Unknown'}}">${{icon}}</td>
                         <td>${{typeBadge}}</td>
                         <td>${{device.ip_address}}</td>
                         <td>${{device.hostname || 'N/A'}}</td>
