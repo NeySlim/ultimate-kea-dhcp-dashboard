@@ -178,7 +178,7 @@ def get_device_type(hostname, vendor, mac, device_info=None):
     
     # Raspberry Pi & SBC
     if any(x in combined for x in ["raspi", "raspberry", "rpi", "pi", "jetson", "odroid", "beaglebone"]):
-        return ("🍓", "Raspberry Pi", "iot")
+        return ("🍓", "Raspberry Pi", "raspberry-pi")
     
     # Servers & NAS (check before generic "server" pattern)
     if any(x in combined for x in ["proxmox", "esxi", "vmware", "vcenter", "hypervisor", "truenas", "freenas"]):
@@ -191,8 +191,12 @@ def get_device_type(hostname, vendor, mac, device_info=None):
     if any(x in combined for x in ["chromecast", "nvidia shield", "kodi", "plex", "media"]):
         return ("📺", "Media Player", "tv")
     
+    # Network Switches (BEFORE gaming detection!)
+    if any(x in h for x in ["switch", "switch1", "switch2", "sw-", "sw1", "sw2"]) and "nintendo" not in v.lower():
+        return ("🔌", "Network Switch", "switch")
+    
     # Gaming
-    if any(x in combined for x in ["gaming", "xbox", "playstation", "ps4", "ps5", "nintendo", "steam", "switch"]):
+    if any(x in combined for x in ["gaming", "xbox", "playstation", "ps4", "ps5", "nintendo", "steam deck"]):
         return ("🎮", "Gaming", "gaming")
     
     # Audio & Speakers
