@@ -2408,6 +2408,7 @@ def generate_html(info, lang="fr"):
                     table {{
                         background: ${{theme.bg_secondary}};
                         border-color: ${{theme.border}};
+                        box-shadow: 0 1px 3px rgba(0,0,0,${{shadowOpacity}});
                     }}
                     th {{
                         background: ${{theme.th_bg}};
@@ -2420,14 +2421,19 @@ def generate_html(info, lang="fr"):
                         background: ${{theme.hover}};
                         color: ${{theme.accent_secondary}};
                     }}
+                    th::after {{
+                        color: ${{theme.accent_primary}};
+                    }}
                     tr:hover {{
                         background: ${{theme.hover}};
                     }}
                     tr.active {{
                         border-left-color: ${{theme.success}};
+                        background: ${{theme.success}}11;
                     }}
                     tr.inactive {{
                         border-left-color: ${{theme.error}};
+                        background: ${{theme.error}}11;
                     }}
                     td {{
                         border-bottom-color: ${{theme.border}};
