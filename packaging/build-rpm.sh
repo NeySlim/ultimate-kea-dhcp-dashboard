@@ -24,7 +24,7 @@ tar czf "$BUILD_DIR/SOURCES/${PACKAGE_NAME}-${VERSION}.tar.gz" \
 
 # Copy and update spec file
 cp "$SPEC_FILE" "$BUILD_DIR/SPECS/"
-sed -i "s/VERSION/${VERSION}/g" "$BUILD_DIR/SPECS/${PACKAGE_NAME}.spec"
+sed -i "s/@VERSION@/${VERSION}/g" "$BUILD_DIR/SPECS/${PACKAGE_NAME}.spec"
 
 # Build RPM
 rpmbuild --define "_topdir $BUILD_DIR" \
