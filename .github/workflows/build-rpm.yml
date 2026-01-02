@@ -82,7 +82,7 @@ jobs:
           
           %files
           /opt/ultimate-kea-dashboard
-          %{_unitdir}/ultimate-kea-dashboard.service
+          /usr/lib/systemd/system/ultimate-kea-dashboard.service
           
           %post
           systemctl daemon-reload
