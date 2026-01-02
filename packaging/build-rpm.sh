@@ -19,7 +19,7 @@ cd "$PROJECT_ROOT"
 tar czf "$BUILD_DIR/SOURCES/${PACKAGE_NAME}-${VERSION}.tar.gz" \
     --transform "s,^,${PACKAGE_NAME}-${VERSION}/," \
     --exclude='.git*' --exclude='packaging' --exclude='*.md' \
-    --exclude='logs' --exclude='data' --exclude='*.pyc' --exclude='__pycache__' \
+    --exclude='logs' --exclude='*.pyc' --exclude='__pycache__' \
     .
 
 # Copy and update spec file

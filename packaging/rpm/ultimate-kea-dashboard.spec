@@ -53,7 +53,10 @@ mkdir -p $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/data
 if [ -d data ]; then
     cp -r data/* $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/data/ 2>/dev/null || true
 fi
-cp start.sh requirements.txt VERSION $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/
+for file in start.sh requirements.txt; do
+    [ -f "$file" ] && cp "$file" $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/
+done
+[ -f VERSION ] && cp VERSION $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/
 
 # Copy configuration
 cp -r etc/* $RPM_BUILD_ROOT/etc/ultimate-kea-dashboard/
