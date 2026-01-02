@@ -73,6 +73,15 @@ def perform_update():
                 'message': 'Not a git repository. Manual update required.'
             }
         
+        # Stash any local changes before pulling
+        stash_result = subprocess.run(
+            ['git', 'stash', 'push', '-u', '-m', 'Auto-stash before update'],
+            cwd=str(install_dir),
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
         # Perform git pull
         result = subprocess.run(
             ['git', 'pull'],
@@ -88,6 +97,16 @@ def perform_update():
                 'error': True,
                 'message': f'Git pull failed: {result.stderr}'
             }
+        
+        # Try to reapply stashed changes (optional, ignore if it fails)
+        if 'No local changes to save' not in stash_result.stdout:
+            subprocess.run(
+                ['git', 'stash', 'pop'],
+                cwd=str(install_dir),
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
         
         # Restart service
         restart_result = subprocess.run(
