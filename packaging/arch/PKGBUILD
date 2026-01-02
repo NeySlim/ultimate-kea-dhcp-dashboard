@@ -19,7 +19,6 @@ depends=(
 )
 optdepends=('kea-ctrl-agent: For enhanced Kea integration')
 backup=('etc/ultimate-kea-dashboard/config.json')
-install=${pkgname}.install
 source=("${pkgname}-${pkgver}.tar.gz")
 sha256sums=('SKIP')
 

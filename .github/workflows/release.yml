@@ -26,6 +26,8 @@ jobs:
           cd packaging
           chmod +x build-deb.sh
           ./build-deb.sh
+          echo "=== Debugging: checking generated control file ==="
+          find /tmp -name "control" -path "*/DEBIAN/*" -exec cat {} \;
       
       - name: Upload Debian package
         uses: actions/upload-artifact@v4
