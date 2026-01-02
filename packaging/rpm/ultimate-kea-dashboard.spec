@@ -44,7 +44,7 @@ rm -rf $RPM_BUILD_ROOT
 # Create directories
 mkdir -p $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard
 mkdir -p $RPM_BUILD_ROOT/etc/ultimate-kea-dashboard
-mkdir -p $RPM_BUILD_ROOT/etc/systemd/system
+mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/system
 mkdir -p $RPM_BUILD_ROOT/var/log/ultimate-kea-dashboard
 
 # Copy application files
@@ -55,7 +55,7 @@ cp start.sh requirements.txt VERSION $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/
 cp -r etc/* $RPM_BUILD_ROOT/etc/ultimate-kea-dashboard/
 
 # Install systemd service
-cp etc/ultimate-kea-dashboard.service $RPM_BUILD_ROOT/etc/systemd/system/
+cp etc/ultimate-kea-dashboard.service $RPM_BUILD_ROOT/usr/lib/systemd/system/
 
 %pre
 # Create user if doesn't exist
@@ -127,7 +127,7 @@ fi
 /opt/ultimate-kea-dashboard/requirements.txt
 /opt/ultimate-kea-dashboard/VERSION
 %config(noreplace) /etc/ultimate-kea-dashboard
-/etc/systemd/system/ultimate-kea-dashboard.service
+/usr/lib/systemd/system/ultimate-kea-dashboard.service
 %dir %attr(0755,ultimate-kea-dashboard,ultimate-kea-dashboard) /var/log/ultimate-kea-dashboard
 
 %changelog
