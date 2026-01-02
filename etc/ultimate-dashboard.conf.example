@@ -16,6 +16,12 @@ kea_leases = /var/lib/kea/kea-leases4.csv
 scan_threads = 50
 scan_timeout = 0.5
 
+# Network scanner ports
+# Comma-separated list of TCP ports to scan
+tcp_ports = 22,80,443,3000,8000,8080,8443,9000,5000,5900,631,3306,5432,25,53,110,143,389,6379
+# Comma-separated list of UDP ports to scan
+udp_ports = 53,67,123,161,162,514,520
+
 # SNMP configuration (optional)
 # Comma-separated list of SNMP communities to try
 snmp_communities = public,home

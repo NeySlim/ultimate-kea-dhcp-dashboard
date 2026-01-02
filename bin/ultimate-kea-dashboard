@@ -65,7 +65,9 @@ DEFAULT_CONFIG = {
     'enable_mdns': True,
     'mdns_timeout': 1,
     'enable_scanner': True,
-    'scanner_timeout': 5
+    'scanner_timeout': 5,
+    'tcp_ports': '22,80,443,3000,8000,8080,8443,9000,5000,5900,631,3306,5432,25,53,110,143,389,6379',
+    'udp_ports': '53,67,123,161,162,514,520'
 }
 
 # Global config
@@ -265,20 +267,38 @@ def network_scanner_thread():
                     for ip in dhcp_ips_to_scan:
                         SCAN_IN_PROGRESS[ip] = True
                 
-                # Parallel scan of DHCP hosts (services only)
+                # Parallel scan of DHCP hosts (services + SNMP if port 161 open)
                 with ThreadPoolExecutor(max_workers=10) as executor:
-                    future_to_ip = {executor.submit(scan_network_host, ip): ip for ip in dhcp_ips_to_scan}
+                    tcp_ports = config.get('tcp_ports', '22,80,443,3000,8000,8080,8443,9000,5000,5900,631,3306,5432,25,53,110,143,389,6379')
+                    udp_ports = config.get('udp_ports', '53,67,123,161,162,514,520')
+                    snmp_communities = config.get('snmp_communities', ['public'])
+                    
+                    future_to_ip = {executor.submit(scan_network_host, ip, tcp_ports, udp_ports): ip for ip in dhcp_ips_to_scan}
                     
                     for future in as_completed(future_to_ip):
                         ip = future_to_ip[future]
                         try:
                             services = future.result(timeout=config['scanner_timeout']+2)
+                            
+                            # Check if SNMP port is open and get SNMP info
+                            snmp_info = None
+                            has_snmp_port = any('161/' in svc.get('port', '') for svc in services)
+                            if has_snmp_port and config.get('enable_snmp', True):
+                                from network_scanner import get_snmp_system_info
+                                snmp_info = get_snmp_system_info(ip, snmp_communities, timeout=1)
+                            
                             with CACHE_LOCK:
                                 NETWORK_SCAN_RESULTS[ip] = services if services else []
+                                if snmp_info:
+                                    # Store SNMP info in enhanced data cache
+                                    if ip not in STATIC_DEVICE_ENHANCED_DATA:
+                                        STATIC_DEVICE_ENHANCED_DATA[ip] = {}
+                                    STATIC_DEVICE_ENHANCED_DATA[ip]['snmp_info'] = snmp_info
+                                    print(f"[INFO] {ip}: {len(services)} services found, SNMP✓")
+                                elif services:
+                                    print(f"[INFO] {ip}: {len(services)} services found")
                                 LAST_SCAN_TIME[ip] = time.time()
                                 SCAN_IN_PROGRESS[ip] = False
-                            if services:
-                                print(f"[INFO] {ip}: {len(services)} services found")
                         except Exception as e:
                             print(f"[WARN] {ip}: scan failed - {e}")
                             with CACHE_LOCK:
@@ -297,7 +317,9 @@ def network_scanner_thread():
                 # Parallel enhanced scan of static hosts
                 with ThreadPoolExecutor(max_workers=10) as executor:
                     snmp_communities = config.get('snmp_communities', ['public'])
-                    future_to_ip = {executor.submit(scan_static_device_enhanced, ip, snmp_communities): ip for ip in static_ips_to_scan}
+                    tcp_ports = config.get('tcp_ports', '22,80,443,3000,8000,8080,8443,9000,5000,5900,631,3306,5432,25,53,110,143,389,6379')
+                    udp_ports = config.get('udp_ports', '53,67,123,161,162,514,520')
+                    future_to_ip = {executor.submit(scan_static_device_enhanced, ip, snmp_communities, tcp_ports, udp_ports): ip for ip in static_ips_to_scan}
                     
                     for future in as_completed(future_to_ip):
                         ip = future_to_ip[future]
@@ -888,6 +910,9 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                     services = NETWORK_SCAN_RESULTS.get(ip, [])
                     is_scanning = SCAN_IN_PROGRESS.get(ip, False)
                     last_scan = LAST_SCAN_TIME.get(ip, 0)
+                    # Get SNMP info from enhanced data cache (populated by scanner)
+                    enhanced = STATIC_DEVICE_ENHANCED_DATA.get(ip, {})
+                    snmp_info = enhanced.get('snmp_info')
                 
                 # Format services with HTML links and icons
                 services_html = []
@@ -905,6 +930,7 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 lease_copy['is_scanning'] = is_scanning
                 lease_copy['last_scan'] = last_scan
                 lease_copy['icon_html'] = custom_svg if custom_svg else None
+                lease_copy['snmp_info'] = snmp_info
                 
                 leases.append(lease_copy)
             

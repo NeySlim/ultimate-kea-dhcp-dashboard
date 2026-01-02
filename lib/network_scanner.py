@@ -84,42 +84,99 @@ def get_hostname_from_snmp(ip, community="public", timeout=2):
     return None
 
 
-def scan_network_host(ip, timeout=5):
-    """Scan host for open ports and services using nmap"""
-    try:
-        result = subprocess.run(
-            ["nmap", "-sV", "-p", "22,80,443,3000,8000,8080,8443,9000,5000,5900,631,3306,5432,25,53,110,143,161,389,6379", 
-             "--open", "--max-retries", "2", "--host-timeout", "30s",
-             "--max-rtt-timeout", "2000ms", "--initial-rtt-timeout", "500ms", 
-             "-T4", "-n", ip],
-            capture_output=True,
-            text=True,
-            timeout=timeout+30
-        )
-        
-        services = []
-        if result.returncode == 0:
-            lines = result.stdout.split('\n')
-            for line in lines:
-                if '/tcp' in line and 'open' in line:
-                    parts = line.split()
-                    if len(parts) >= 3:
-                        port_service = parts[0]
-                        status = parts[1]
-                        service = ' '.join(parts[2:]) if len(parts) > 2 else "Unknown"
-                        services.append({
-                            "port": port_service,
-                            "status": status,
-                            "service": service
-                        })
-        
-        return services
-    except Exception:
-        return []
+def scan_network_host(ip, tcp_ports=None, udp_ports=None, timeout=5):
+    """Scan host for open ports and services using nmap
+    
+    Args:
+        ip: IP address to scan
+        tcp_ports: Comma-separated list of TCP ports to scan
+        udp_ports: Comma-separated list of UDP ports to scan
+        timeout: Scan timeout in seconds
+    
+    Returns:
+        list: List of discovered services
+    """
+    if tcp_ports is None:
+        tcp_ports = "22,80,443,3000,8000,8080,8443,9000,5000,5900,631,3306,5432,25,53,110,143,389,6379"
+    if udp_ports is None:
+        udp_ports = "53,67,123,161,162,514,520"
+    
+    services = []
+    
+    # TCP scan
+    if tcp_ports:
+        try:
+            result = subprocess.run(
+                ["nmap", "-sV", "-p", tcp_ports, 
+                 "--open", "--max-retries", "2", "--host-timeout", "30s",
+                 "--max-rtt-timeout", "2000ms", "--initial-rtt-timeout", "500ms", 
+                 "-T4", "-n", ip],
+                capture_output=True,
+                text=True,
+                timeout=timeout+30
+            )
+            
+            if result.returncode == 0:
+                lines = result.stdout.split('\n')
+                for line in lines:
+                    if '/tcp' in line and 'open' in line:
+                        parts = line.split()
+                        if len(parts) >= 3:
+                            port_service = parts[0]
+                            status = parts[1]
+                            service = ' '.join(parts[2:]) if len(parts) > 2 else "Unknown"
+                            services.append({
+                                "port": port_service,
+                                "status": status,
+                                "service": service
+                            })
+        except Exception:
+            pass
+    
+    # UDP scan
+    if udp_ports:
+        try:
+            result = subprocess.run(
+                ["nmap", "-sU", "-p", udp_ports,
+                 "--open", "--max-retries", "1", "--host-timeout", "15s",
+                 "-T4", "-n", ip],
+                capture_output=True,
+                text=True,
+                timeout=timeout+20
+            )
+            
+            if result.returncode == 0:
+                lines = result.stdout.split('\n')
+                for line in lines:
+                    if '/udp' in line and 'open' in line:
+                        parts = line.split()
+                        if len(parts) >= 3:
+                            port_service = parts[0]
+                            status = parts[1]
+                            service = ' '.join(parts[2:]) if len(parts) > 2 else "Unknown"
+                            services.append({
+                                "port": port_service,
+                                "status": status,
+                                "service": service
+                            })
+        except Exception:
+            pass
+    
+    return services
 
 
-def scan_static_device_enhanced(ip, snmp_communities=None):
-    """Enhanced scan for static devices using multiple methods"""
+def scan_static_device_enhanced(ip, snmp_communities=None, tcp_ports=None, udp_ports=None):
+    """Enhanced scan for static devices using multiple methods
+    
+    Args:
+        ip: IP address to scan
+        snmp_communities: List of SNMP communities to try
+        tcp_ports: Comma-separated list of TCP ports to scan
+        udp_ports: Comma-separated list of UDP ports to scan
+    
+    Returns:
+        dict: Device information including services and SNMP data
+    """
     if snmp_communities is None:
         snmp_communities = ["public"]
     elif isinstance(snmp_communities, str):
@@ -151,7 +208,7 @@ def scan_static_device_enhanced(ip, snmp_communities=None):
         data['hostname'] = hostname
     
     # Scan for services first to detect if SNMP port is open
-    data['services'] = scan_network_host(ip)
+    data['services'] = scan_network_host(ip, tcp_ports=tcp_ports, udp_ports=udp_ports)
     
     # Check if SNMP port (161) is open
     for svc in data['services']:

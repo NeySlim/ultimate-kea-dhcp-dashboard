@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.6.6] - 2026-01-02
+
+### 🔧 Corrections
+- **FIXED**: Scan SNMP cassé - Les ports UDP n'étaient pas scannés
+  - Ajout du scan UDP (port 161) pour détecter les services SNMP
+  - Le scan nmap ne détectait que les ports TCP, manquant ainsi tous les services UDP
+  - 7 devices SNMP maintenant détectés (au lieu de 0)
+  
+### ✨ Améliorations
+- **NEW**: Support configurable des ports TCP et UDP à scanner
+  - Nouveaux paramètres `tcp_ports` et `udp_ports` dans la configuration
+  - Ports UDP par défaut: 53 (DNS), 67 (DHCP), 123 (NTP), 161/162 (SNMP), 514 (Syslog), 520 (RIP)
+  - Ports TCP configurables via fichier de conf
+  - Scan UDP et TCP parallèles pour meilleure performance
+- **IMPROVED**: Fonction `scan_network_host()` refactorisée
+  - Gestion séparée des scans TCP et UDP
+  - Meilleure gestion des erreurs
+  - Documentation améliorée
+
+---
+
 ## [1.6.5] - 2026-01-02
 
 ### Améliorations
