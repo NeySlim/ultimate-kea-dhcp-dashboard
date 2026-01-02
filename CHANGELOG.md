@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.6.2] - 2026-01-02
+
+### Améliorations
+- Workflows de packaging séparés par distribution (DEB, RPM, Arch)
+- Correction des noms de release pour utiliser les tags de version
+
+### Corrections
+- Fix du workflow de création des packages
+
+---
+
 ## [1.6.0] - 2026-01-02 - Production-Ready Multi-Distribution Packaging
 
 ### Major Milestone 🎉
