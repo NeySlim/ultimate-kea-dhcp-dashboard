@@ -48,7 +48,11 @@ mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/system
 mkdir -p $RPM_BUILD_ROOT/var/log/ultimate-kea-dashboard
 
 # Copy application files
-cp -r bin lib static data $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/
+cp -r bin lib static $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/
+mkdir -p $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/data
+if [ -d data ]; then
+    cp -r data/* $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/data/ 2>/dev/null || true
+fi
 cp start.sh requirements.txt VERSION $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/
 
 # Copy configuration
@@ -131,14 +135,14 @@ fi
 %dir %attr(0755,ultimate-kea-dashboard,ultimate-kea-dashboard) /var/log/ultimate-kea-dashboard
 
 %changelog
-* Wed Jan 01 2026 NeySlim <neyslim@example.com> - 1.5.7-1
-- New upstream release 1.5.7
+* Thu Jan 02 2025 NeySlim <neyslim@example.com> - 1.6.1-1
+- New upstream release 1.6.1
 - Added native packaging for Debian/Ubuntu, Red Hat/Fedora, and Arch Linux
 - Automated package building via GitHub Actions
 - All packages include Kea DHCP server as dependency
 - Automatic service and user setup
 
-* Wed Jan 01 2026 NeySlim <neyslim@example.com> - 1.5.6-1
+* Thu Jan 02 2025 NeySlim <neyslim@example.com> - 1.5.6-1
 - New upstream release 1.5.6
 - Added configurable refresh interval
 - Improved vendor lookup with OUI database
