@@ -70,9 +70,20 @@ jobs:
           chmod +x create-installer.sh
           ./create-installer.sh
       
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=v$(cat VERSION)" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: Release ${{ steps.get_version.outputs.version }}
           files: |
             ultimate-kea-dashboard-installer.sh
             install.sh
