@@ -72,6 +72,20 @@ def get_device_type(hostname, vendor, mac, device_info=None):
     if custom_type:
         return custom_type
     
+    # Proxmox detection (must be BEFORE other checks)
+    # 1. Hostname contains "pve" = Proxmox hypervisor
+    # 2. Vendor = "Proxmox Server Solutions" = VM on Proxmox
+    if "proxmox server solutions" in v:
+        # It's a VM running on Proxmox (MAC assigned by Proxmox)
+        return ("💻", "Proxmox VM", "computer")
+    
+    if any(x in h for x in ["pve", "proxmox"]) and "proxmox" not in v:
+        # Hostname contains pve/proxmox but vendor is NOT Proxmox = it's the hypervisor itself
+        # Special case for Raspberry Pi running Proxmox
+        if "raspberry" in v.lower() or "raspberrypi" in h:
+            return ("🍓", "Proxmox (RPi)", "raspberry-pi")
+        return ("📡", "Proxmox VE", "server")
+    
     # Cameras
     if any(x in combined for x in ["dafang", "camera", "webcam", "hikvision", "dahua", "reolink", "wyze", "ring", "doorbell", "video", "ipcam", "cam-"]):
         return ("📷", "Camera", "camera")
