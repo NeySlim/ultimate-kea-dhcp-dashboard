@@ -24,6 +24,7 @@ jobs:
       - name: Build Debian package
         run: |
           cd packaging
+          rm -f *.deb
           chmod +x build-deb.sh
           ./build-deb.sh
       
