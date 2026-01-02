@@ -10,47 +10,52 @@ permissions:
   contents: write
 
 jobs:
-  build-packages:
+  build-deb:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - distro: debian
-            format: deb
-          - distro: ubuntu
-            format: deb
-          - distro: fedora
-            format: rpm
-          - distro: rocky
-            format: rpm
     
     steps:
       - uses: actions/checkout@v3
       
       - name: Install packaging tools
         run: |
-          if [ "${{ matrix.format }}" = "deb" ]; then
-            sudo apt-get update
-            sudo apt-get install -y dpkg-dev debhelper
-          else
-            sudo apt-get update
-            sudo apt-get install -y rpm
-          fi
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev debhelper
       
-      - name: Build ${{ matrix.distro }} package
+      - name: Build Debian package
         run: |
           cd packaging
-          chmod +x build-${{ matrix.format }}.sh
-          ./build-${{ matrix.format }}.sh
+          chmod +x build-deb.sh
+          ./build-deb.sh
       
-      - name: Upload ${{ matrix.distro }} package
+      - name: Upload Debian package
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.distro }}-package
-          path: packaging/*.${{ matrix.format }}
+          name: debian-package
+          path: packaging/*.deb
+  
+  build-arch:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Build Arch package in container
+        run: |
+          docker run --rm -v "$PWD:/workspace" -w /workspace archlinux:latest bash -c "
+            pacman -Syu --noconfirm base-devel git
+            cd packaging
+            chmod +x build-arch.sh
+            ./build-arch.sh
+          "
+      
+      - name: Upload Arch package
+        uses: actions/upload-artifact@v4
+        with:
+          name: arch-package
+          path: packaging/*.pkg.tar.zst
   
   release:
-    needs: build-packages
+    needs: [build-deb, build-arch]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -73,7 +78,7 @@ jobs:
             install.sh
             README.md
             packages/*/*.deb
-            packages/*/*.rpm
+            packages/*/*.pkg.tar.zst
           draft: false
           prerelease: false
         env:
