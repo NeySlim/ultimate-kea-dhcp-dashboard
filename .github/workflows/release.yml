@@ -10,86 +10,10 @@ permissions:
   contents: write
 
 jobs:
-  build-deb:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Install packaging tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y dpkg-dev debhelper
-      
-      - name: Build Debian package
-        run: |
-          cd packaging
-          chmod +x build-deb.sh
-          ./build-deb.sh
-      
-      - name: Upload Debian package
-        uses: actions/upload-artifact@v4
-        with:
-          name: debian-package
-          path: packaging/*.deb
-  
-  build-arch:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Build Arch package in container
-        run: |
-          docker run --rm -v "$PWD:/workspace" -w /workspace archlinux:latest bash -c "
-            pacman -Syu --noconfirm libarchive zstd
-            cd packaging
-            chmod +x build-arch.sh
-            ./build-arch.sh
-          "
-      
-      - name: Upload Arch package
-        uses: actions/upload-artifact@v4
-        with:
-          name: arch-package
-          path: packaging/*.pkg.tar.zst
-  
-  build-rpm:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Build RPM package in container
-        run: |
-          docker run --rm -v "$PWD:/workspace" -w /workspace fedora:latest bash -c "
-            dnf install -y rpm-build rpmdevtools
-            cd packaging
-            chmod +x build-rpm.sh
-            ./build-rpm.sh
-          "
-      
-      - name: Upload RPM package
-        uses: actions/upload-artifact@v4
-        with:
-          name: rpm-package
-          path: packaging/*.rpm
-  
   release:
-    needs: [build-deb, build-arch, build-rpm]
-    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
-      - name: Download all packages
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          path: packages
       
       - name: Generate installer
         run: |
@@ -114,9 +38,6 @@ jobs:
             ultimate-kea-dashboard-installer.sh
             install.sh
             README.md
-            packages/*/*.deb
-            packages/*/*.pkg.tar.zst
-            packages/*/*.rpm
           draft: false
           prerelease: false
         env:

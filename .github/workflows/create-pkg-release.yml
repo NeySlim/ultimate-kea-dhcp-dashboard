@@ -1,0 +1,34 @@
+name: Create PKG Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-arch:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Build Arch package in container
+        run: |
+          docker run --rm -v "$PWD:/workspace" -w /workspace archlinux:latest bash -c "
+            pacman -Syu --noconfirm libarchive zstd
+            cd packaging
+            chmod +x build-arch.sh
+            ./build-arch.sh
+          "
+      
+      - name: Upload to existing release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: packaging/*.pkg.tar.zst
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
