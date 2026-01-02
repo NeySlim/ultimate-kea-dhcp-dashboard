@@ -18,6 +18,7 @@ import queue
 import time
 import ipaddress
 import os
+import random
 from datetime import datetime
 from html import escape
 from pathlib import Path
@@ -247,16 +248,25 @@ def network_scanner_thread():
             current_time = time.time()
             
             # Find IPs that need scanning (not scanned in last 60 seconds)
+            # Add random initial delay (0-60s) to spread load on first scan
             dhcp_ips_to_scan = []
             static_ips_to_scan = []
             
             for ip in dhcp_ips:
                 last_scan = LAST_SCAN_TIME.get(ip, 0)
+                # On first scan (last_scan=0), add random offset to avoid thundering herd
+                if last_scan == 0:
+                    last_scan = current_time - random.randint(0, 60)
+                    LAST_SCAN_TIME[ip] = last_scan
                 if current_time - last_scan >= 60:
                     dhcp_ips_to_scan.append(ip)
             
             for ip in static_ips:
                 last_scan = LAST_SCAN_TIME.get(ip, 0)
+                # On first scan (last_scan=0), add random offset to avoid thundering herd
+                if last_scan == 0:
+                    last_scan = current_time - random.randint(0, 60)
+                    LAST_SCAN_TIME[ip] = last_scan
                 if current_time - last_scan >= 60:
                     static_ips_to_scan.append(ip)
             
