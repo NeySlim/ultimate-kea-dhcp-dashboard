@@ -10,21 +10,25 @@ case "$1" in
         fi
         
         # Create directories if they don't exist
-        mkdir -p /etc/ultimate-kea-dashboard
-        mkdir -p /var/log/ultimate-kea-dashboard
+        mkdir -p /opt/ultimate-kea-dashboard || true
+        mkdir -p /opt/ultimate-kea-dashboard/data || true
+        mkdir -p /etc/ultimate-kea-dashboard || true
+        mkdir -p /var/log/ultimate-kea-dashboard || true
         
-        # Set permissions
-        chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /opt/ultimate-kea-dashboard
-        chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /etc/ultimate-kea-dashboard
-        chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /var/log/ultimate-kea-dashboard
+        # Set permissions only if directories exist
+        [ -d /opt/ultimate-kea-dashboard ] && chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /opt/ultimate-kea-dashboard || true
+        [ -d /etc/ultimate-kea-dashboard ] && chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /etc/ultimate-kea-dashboard || true
+        [ -d /var/log/ultimate-kea-dashboard ] && chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /var/log/ultimate-kea-dashboard || true
         
         # Install Python dependencies
-        cd /opt/ultimate-kea-dashboard
-        pip3 install --break-system-packages -r requirements.txt >/dev/null 2>&1 || \
-        pip3 install -r requirements.txt >/dev/null 2>&1
+        if [ -f /opt/ultimate-kea-dashboard/requirements.txt ]; then
+            cd /opt/ultimate-kea-dashboard
+            pip3 install --break-system-packages -r requirements.txt >/dev/null 2>&1 || \
+            pip3 install -r requirements.txt >/dev/null 2>&1 || true
+        fi
         
         # Download OUI database if not present
-        if [ ! -f /opt/ultimate-kea-dashboard/data/oui.txt ]; then
+        if [ -d /opt/ultimate-kea-dashboard/data ] && [ ! -f /opt/ultimate-kea-dashboard/data/oui.txt ]; then
             curl -s -o /opt/ultimate-kea-dashboard/data/oui.txt \
                  http://standards-oui.ieee.org/oui/oui.txt || true
         fi
