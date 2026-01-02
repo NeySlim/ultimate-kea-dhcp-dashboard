@@ -99,68 +99,90 @@ def scan_network_host(ip, tcp_ports=None, udp_ports=None, timeout=5):
     if tcp_ports is None:
         tcp_ports = "22,80,443,3000,8000,8080,8443,9000,5000,5900,631,3306,5432,25,53,110,143,389,6379"
     if udp_ports is None:
-        udp_ports = "53,67,123,161,162,514,520"
+        udp_ports = "53,67,69,123,137,138,161,162,500,514,520,1194"
     
     services = []
     
-    # TCP scan
-    if tcp_ports:
-        try:
-            result = subprocess.run(
-                ["nmap", "-sV", "-p", tcp_ports, 
-                 "--open", "--max-retries", "2", "--host-timeout", "30s",
-                 "--max-rtt-timeout", "2000ms", "--initial-rtt-timeout", "500ms", 
-                 "-T4", "-n", ip],
-                capture_output=True,
-                text=True,
-                timeout=timeout+30
-            )
-            
-            if result.returncode == 0:
-                lines = result.stdout.split('\n')
-                for line in lines:
-                    if '/tcp' in line and 'open' in line:
-                        parts = line.split()
-                        if len(parts) >= 3:
-                            port_service = parts[0]
-                            status = parts[1]
-                            service = ' '.join(parts[2:]) if len(parts) > 2 else "Unknown"
-                            services.append({
-                                "port": port_service,
-                                "status": status,
-                                "service": service
-                            })
-        except Exception:
-            pass
+    # Run TCP and UDP scans in parallel for better performance
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     
-    # UDP scan
-    if udp_ports:
-        try:
-            result = subprocess.run(
-                ["nmap", "-sU", "-p", udp_ports,
-                 "--open", "--max-retries", "1", "--host-timeout", "15s",
-                 "-T4", "-n", ip],
-                capture_output=True,
-                text=True,
-                timeout=timeout+20
-            )
-            
-            if result.returncode == 0:
-                lines = result.stdout.split('\n')
-                for line in lines:
-                    if '/udp' in line and 'open' in line:
-                        parts = line.split()
-                        if len(parts) >= 3:
-                            port_service = parts[0]
-                            status = parts[1]
-                            service = ' '.join(parts[2:]) if len(parts) > 2 else "Unknown"
-                            services.append({
-                                "port": port_service,
-                                "status": status,
-                                "service": service
-                            })
-        except Exception:
-            pass
+    def scan_tcp():
+        """TCP scan thread"""
+        tcp_services = []
+        if tcp_ports:
+            try:
+                result = subprocess.run(
+                    ["nmap", "-sV", "-p", tcp_ports, 
+                     "--open", "--max-retries", "2", "--host-timeout", "30s",
+                     "--max-rtt-timeout", "2000ms", "--initial-rtt-timeout", "500ms", 
+                     "-T4", "-n", ip],
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout+30
+                )
+                
+                if result.returncode == 0:
+                    lines = result.stdout.split('\n')
+                    for line in lines:
+                        if '/tcp' in line and 'open' in line:
+                            parts = line.split()
+                            if len(parts) >= 3:
+                                port_service = parts[0]
+                                status = parts[1]
+                                service = ' '.join(parts[2:]) if len(parts) > 2 else "Unknown"
+                                tcp_services.append({
+                                    "port": port_service,
+                                    "status": status,
+                                    "service": service
+                                })
+            except Exception:
+                pass
+        return tcp_services
+    
+    def scan_udp():
+        """UDP scan thread"""
+        udp_services = []
+        if udp_ports:
+            try:
+                result = subprocess.run(
+                    ["nmap", "-sU", "-p", udp_ports,
+                     "--open", "--max-retries", "1", "--host-timeout", "15s",
+                     "-T4", "-n", ip],
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout+20
+                )
+                
+                if result.returncode == 0:
+                    lines = result.stdout.split('\n')
+                    for line in lines:
+                        if '/udp' in line and 'open' in line:
+                            parts = line.split()
+                            if len(parts) >= 3:
+                                port_service = parts[0]
+                                status = parts[1]
+                                service = ' '.join(parts[2:]) if len(parts) > 2 else "Unknown"
+                                udp_services.append({
+                                    "port": port_service,
+                                    "status": status,
+                                    "service": service
+                                })
+            except Exception:
+                pass
+        return udp_services
+    
+    # Execute both scans in parallel
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        tcp_future = executor.submit(scan_tcp)
+        udp_future = executor.submit(scan_udp)
+        
+        # Collect results
+        for future in as_completed([tcp_future, udp_future]):
+            try:
+                result = future.result()
+                services.extend(result)
+            except Exception:
+                pass
     
     return services
 

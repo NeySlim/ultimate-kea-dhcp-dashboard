@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.6.7] - 2026-01-02
+
+### ⚡ Optimisations Performance
+- **OPTIMIZED**: Scan TCP/UDP parallèle (gain ~10-15s par device)
+  - Les scans TCP et UDP s'exécutent maintenant en parallèle au lieu de séquentiellement
+  - Utilise ThreadPoolExecutor pour scanner simultanément
+  - Réduction significative du temps de scan global
+  
+- **OPTIMIZED**: Cache SNMP avec TTL de 5 minutes
+  - Les données SNMP sont cachées pendant 5 minutes (au lieu de 60 secondes)
+  - Réduit drastiquement le nombre de requêtes SNMP
+  - Les infos SNMP changent rarement (sysName, sysContact, sysLocation)
+  - Seul sysUpTime change fréquemment
+  
+- **NEW**: Ports UDP supplémentaires
+  - Ajout port 69 (TFTP)
+  - Ajout ports 137-138 (NetBIOS)
+  - Ajout port 500 (IPSec/IKE)
+  - Ajout port 1194 (OpenVPN)
+  - Meilleure découverte des services réseau
+
+### Configuration
+Ports UDP par défaut: `53,67,69,123,137,138,161,162,500,514,520,1194`
+
+---
+
 ## [1.6.6] - 2026-01-02
 
 ### 🔧 Corrections

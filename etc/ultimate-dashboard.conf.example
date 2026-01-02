@@ -20,7 +20,8 @@ scan_timeout = 0.5
 # Comma-separated list of TCP ports to scan
 tcp_ports = 22,80,443,3000,8000,8080,8443,9000,5000,5900,631,3306,5432,25,53,110,143,389,6379
 # Comma-separated list of UDP ports to scan
-udp_ports = 53,67,123,161,162,514,520
+# 53=DNS, 67=DHCP, 69=TFTP, 123=NTP, 137-138=NetBIOS, 161-162=SNMP, 500=IPSec, 514=Syslog, 520=RIP, 1194=OpenVPN
+udp_ports = 53,67,69,123,137,138,161,162,500,514,520,1194
 
 # SNMP configuration (optional)
 # Comma-separated list of SNMP communities to try

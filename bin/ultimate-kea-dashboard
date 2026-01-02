@@ -67,7 +67,7 @@ DEFAULT_CONFIG = {
     'enable_scanner': True,
     'scanner_timeout': 5,
     'tcp_ports': '22,80,443,3000,8000,8080,8443,9000,5000,5900,631,3306,5432,25,53,110,143,389,6379',
-    'udp_ports': '53,67,123,161,162,514,520'
+    'udp_ports': '53,67,69,123,137,138,161,162,500,514,520,1194'
 }
 
 # Global config
@@ -76,6 +76,8 @@ DEVICE_INFO_CACHE = {}
 NETWORK_SCAN_RESULTS = {}
 STATIC_DEVICE_ENHANCED_DATA = {}
 LAST_SCAN_TIME = {}
+SNMP_CACHE = {}  # Cache for SNMP data with timestamp
+SNMP_CACHE_TTL = 300  # 5 minutes cache for SNMP data
 SCAN_IN_PROGRESS = {}
 CACHE_LOCK = threading.Lock()
 SCAN_THREAD = None
@@ -283,9 +285,23 @@ def network_scanner_thread():
                             # Check if SNMP port is open and get SNMP info
                             snmp_info = None
                             has_snmp_port = any('161/' in svc.get('port', '') for svc in services)
+                            
                             if has_snmp_port and config.get('enable_snmp', True):
-                                from network_scanner import get_snmp_system_info
-                                snmp_info = get_snmp_system_info(ip, snmp_communities, timeout=1)
+                                # Check SNMP cache first (5 minute TTL)
+                                current_time = time.time()
+                                with CACHE_LOCK:
+                                    cached = SNMP_CACHE.get(ip)
+                                    if cached and (current_time - cached['timestamp']) < SNMP_CACHE_TTL:
+                                        snmp_info = cached['data']
+                                    else:
+                                        # Cache miss or expired - fetch new SNMP data
+                                        from network_scanner import get_snmp_system_info
+                                        snmp_info = get_snmp_system_info(ip, snmp_communities, timeout=1)
+                                        if snmp_info:
+                                            SNMP_CACHE[ip] = {
+                                                'data': snmp_info,
+                                                'timestamp': current_time
+                                            }
                             
                             with CACHE_LOCK:
                                 NETWORK_SCAN_RESULTS[ip] = services if services else []
