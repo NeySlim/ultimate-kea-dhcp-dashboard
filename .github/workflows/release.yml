@@ -56,14 +56,38 @@ jobs:
           name: arch-package
           path: packaging/*.pkg.tar.zst
   
+  build-rpm:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Build RPM package in container
+        run: |
+          docker run --rm -v "$PWD:/workspace" -w /workspace fedora:latest bash -c "
+            dnf install -y rpm-build rpmdevtools
+            cd packaging
+            chmod +x build-rpm.sh
+            ./build-rpm.sh
+          "
+      
+      - name: Upload RPM package
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-package
+          path: packaging/*.rpm
+  
   release:
-    needs: [build-deb, build-arch]
+    needs: [build-deb, build-arch, build-rpm]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       
       - name: Download all packages
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           path: packages
       
@@ -92,6 +116,7 @@ jobs:
             README.md
             packages/*/*.deb
             packages/*/*.pkg.tar.zst
+            packages/*/*.rpm
           draft: false
           prerelease: false
         env:
