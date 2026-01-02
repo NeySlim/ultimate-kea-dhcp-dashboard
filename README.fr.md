@@ -4,80 +4,93 @@
 
 ---
 
-Un tableau de bord web moderne et temps-réel pour surveiller les baux ISC Kea DHCP, les pools et les périphériques réseau avec des capacités de scan avancées et visualisation des métriques système.
+Un tableau de bord web moderne pour serveur ISC Kea DHCP avec découverte réseau avancée, surveillance SNMP et métriques système.
 
 ![Dashboard Screenshot](docs/images/dashboard-screenshot.png)
 
-## Fonctionnalités
+## Fonctionnalités Principales
 
-### Surveillance DHCP
-- Suivi des baux DHCP en temps réel via le socket de contrôle Kea
-- Récupération automatique de la configuration des pools et sous-réseaux depuis Kea
-- Visualisation de l'utilisation des pools
-- Gestion des IP réservées
-- Identification des vendeurs d'adresses MAC (base de données IEEE OUI)
-- Résolution automatique des noms d'hôtes
+- **Surveillance DHCP**: Suivi des baux en temps réel, utilisation des pools, identification vendeur MAC (IEEE OUI)
+- **Découverte Réseau**: Scan multi-threadé, détection services (SSH/HTTP/SNMP), identification type d'appareil
+- **Intégration SNMP**: Découverte informations système (sysDescr, sysContact, sysLocation, sysUpTime), communautés configurables
+- **Métriques Système**: Surveillance CPU/RAM/Réseau/Disque en temps réel avec jauges réactives
+- **Interface Moderne**: 7 thèmes (Ember, Twilight, Frost, Blossom, Clarity, Pulse, Vicuna), 5 langues, design réactif
+- **Mise à Jour Auto**: Vérificateur de mises à jour intégré avec installation en un clic
 
-### Scan et Découverte Réseau
-- Découverte active des périphériques dans et hors des pools DHCP
-- Scan réseau multi-threadé pour des résultats rapides (pool de threads configurable)
-- Détection complète des services (SSH, HTTP/HTTPS, SNMP, et plus)
-- **Découverte des informations système via SNMP** (sysDescr, sysContact, sysLocation, sysUpTime)
-- **Communautés SNMP configurables** pour une interrogation avancée des équipements
-- Identification avancée du type d'appareil avec icônes SVG personnalisées
-- Contrôle de scan individuel et global
-- Surveillance de l'état du scan en temps réel
+## Installation
 
-### Métriques Système
-- CPU, RAM, réseau et utilisation disque en temps réel
-- Visualisation par jauges réactives
-- Schémas de couleurs adaptés au thème
-- Surveillance CPU par cœur
-- Mises à jour des métriques en direct (rafraîchissement 1 seconde)
-
-### Interface Moderne
-- 6 thèmes professionnels (Ember, Twilight, Frost, Blossom, Clarity, Pulse)
-- Système d'icônes SVG personnalisées adaptées au thème
-- Design réactif optimisé pour toutes les tailles d'écran
-- Mises à jour des données en temps réel sans rechargement de page
-- Support multi-langue (Anglais, Français, Espagnol, Allemand, Thaï)
-- Interface épurée et intuitive avec esthétique professionnelle
-
-## Prérequis
-
-- Python 3.8+
-- Serveur ISC Kea DHCP
-- Système Linux (distributions multiples supportées)
-- Accès root ou sudo pour le scan réseau
-
-### Distributions Linux Supportées
-
-- **Debian/Ubuntu** (APT)
-- **Fedora/CentOS/RHEL/Rocky/AlmaLinux** (DNF/YUM)
-- **Arch/Manjaro** (Pacman)
-- **openSUSE/SLES** (Zypper)
-
-Voir [Distributions Supportées](docs/DISTRIBUTIONS.fr.md) pour les informations de compatibilité détaillées.
-
-## Installation Rapide
-
-L'installateur détecte automatiquement votre distribution Linux et configure le gestionnaire de paquets approprié.
-
-### Méthode 1 : Installateur Auto-Extractible (Recommandé)
-
-Téléchargez et exécutez l'installateur autonome :
+### Installateur Automatisé (Recommandé)
 
 ```bash
-# Télécharger l'installateur
-curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/ultimate-kea-dashboard-installer.sh -o installer.sh
-
-# L'exécuter
+curl -sL https://github.com/NeySlim/ultimate-kea-dhcp-dashboard/releases/latest/download/ultimate-kea-dashboard-installer.sh -o installer.sh
 sudo bash installer.sh
 ```
 
-### Méthode 2 : Script d'Installation Direct
+### Paquets par Distribution
+
+Téléchargez `.deb`, `.rpm`, ou `.pkg.tar.zst` depuis les [releases](https://github.com/NeySlim/ultimate-kea-dhcp-dashboard/releases):
 
 ```bash
+# Debian/Ubuntu
+sudo dpkg -i ultimate-kea-dashboard_*.deb && sudo apt-get install -f
+
+# Fedora/RHEL
+sudo dnf install ultimate-kea-dashboard-*.rpm
+
+# Arch Linux
+sudo pacman -U ultimate-kea-dashboard-*.pkg.tar.zst
+```
+
+### Installation Manuelle
+
+```bash
+git clone https://github.com/NeySlim/ultimate-kea-dhcp-dashboard.git
+cd ultimate-kea-dhcp-dashboard
+sudo bash install.sh
+```
+
+**Dépendances**: Python 3.8+, ISC Kea, nmap, arping, net-tools, python3-psutil. Optionnel: snmp, avahi-utils.
+
+## Configuration
+
+Éditez `/opt/ultimate-kea-dashboard/etc/ultimate-kea-dashboard.conf`:
+
+```ini
+[DEFAULT]
+port = 8089
+ssl_enabled = true
+kea_socket = /run/kea/kea4-ctrl-socket
+scan_threads = 50
+snmp_enabled = true
+snmp_communities = public,home
+```
+
+Configuration automatiquement récupérée depuis Kea via socket de contrôle—aucune configuration manuelle subnet/pool requise!
+
+## Utilisation
+
+Accès à `https://votre-serveur:8089` (ou HTTP si SSL désactivé)
+
+- **Paramètres**: Configurer intervalles de rafraîchissement, thèmes, langues
+- **Contrôle Scan**: Pause/reprise de la découverte réseau
+- **Mise à Jour Auto**: Vérificateur de mises à jour avec installation en un clic
+
+## Documentation
+
+- [Guides d'Installation](docs/) - Instructions spécifiques par distribution
+- [Dépendances](docs/DEPENDENCIES.fr.md) - Liste complète des dépendances
+- [Thèmes](THEME.md) - Personnalisation des thèmes
+- [SNMP](SNMP-FEATURE.md) - Configuration SNMP
+
+## Licence
+
+Licence MIT - Voir [LICENSE](LICENSE) pour les détails.
+
+## Liens
+
+- [Changelog](CHANGELOG.md)
+- [Contribution](CONTRIBUTING.md)
+- [Sécurité](SECURITY.md)
 # Télécharger et exécuter l'installateur
 curl -sL https://raw.githubusercontent.com/username/ultimate-kea-dhcp-dashboard/main/install.sh -o install.sh
 sudo bash install.sh
