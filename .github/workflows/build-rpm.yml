@@ -1,0 +1,133 @@
+name: Build RPM Package
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+    container:
+      image: rockylinux:9
+    
+    steps:
+      - name: Install build dependencies
+        run: |
+          dnf install -y rpm-build rpmdevtools git python3 python3-pip
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up RPM build environment
+        run: |
+          rpmdev-setuptree
+          
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"
+          else
+            VERSION=$(cat VERSION 2>/dev/null || echo "1.6.1")
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Create RPM spec file
+        run: |
+          cat > ~/rpmbuild/SPECS/ultimate-kea-dashboard.spec <<'EOF'
+          Name:           ultimate-kea-dashboard
+          Version:        ${{ steps.version.outputs.version }}
+          Release:        1%{?dist}
+          Summary:        Advanced Web Dashboard for ISC Kea DHCP Server
+          
+          License:        MIT
+          URL:            https://github.com/NeySlim/ultimate-kea-dhcp-dashboard
+          Source0:        %{name}-%{version}.tar.gz
+          
+          BuildArch:      noarch
+          Requires:       python3 >= 3.8
+          Requires:       python3-pip
+          Requires:       kea
+          
+          %description
+          Ultimate Kea Dashboard is a modern, feature-rich web interface for managing
+          and monitoring ISC Kea DHCP servers with real-time updates and advanced features.
+          
+          %prep
+          %setup -q
+          
+          %install
+          mkdir -p %{buildroot}/opt/ultimate-kea-dashboard
+          cp -r * %{buildroot}/opt/ultimate-kea-dashboard/
+          
+          mkdir -p %{buildroot}%{_unitdir}
+          cat > %{buildroot}%{_unitdir}/ultimate-kea-dashboard.service <<'UNIT'
+          [Unit]
+          Description=Ultimate Kea Dashboard
+          After=network.target
+          
+          [Service]
+          Type=simple
+          User=root
+          WorkingDirectory=/opt/ultimate-kea-dashboard
+          ExecStart=/opt/ultimate-kea-dashboard/start.sh
+          Restart=on-failure
+          RestartSec=5
+          
+          [Install]
+          WantedBy=multi-user.target
+          UNIT
+          
+          %files
+          /opt/ultimate-kea-dashboard
+          %{_unitdir}/ultimate-kea-dashboard.service
+          
+          %post
+          systemctl daemon-reload
+          
+          %preun
+          if [ $1 -eq 0 ]; then
+            systemctl stop ultimate-kea-dashboard.service 2>/dev/null || true
+            systemctl disable ultimate-kea-dashboard.service 2>/dev/null || true
+          fi
+          
+          %postun
+          systemctl daemon-reload
+          EOF
+
+      - name: Create source tarball
+        run: |
+          mkdir -p ultimate-kea-dashboard-${{ steps.version.outputs.version }}
+          cp -r * ultimate-kea-dashboard-${{ steps.version.outputs.version }}/ 2>/dev/null || true
+          tar czf ~/rpmbuild/SOURCES/ultimate-kea-dashboard-${{ steps.version.outputs.version }}.tar.gz \
+            ultimate-kea-dashboard-${{ steps.version.outputs.version }}/
+
+      - name: Build RPM
+        run: |
+          rpmbuild -ba ~/rpmbuild/SPECS/ultimate-kea-dashboard.spec
+          
+      - name: Find RPM file
+        id: find_rpm
+        run: |
+          RPM_FILE=$(find ~/rpmbuild/RPMS -name "*.rpm" -type f | head -n 1)
+          echo "rpm_file=$RPM_FILE" >> $GITHUB_OUTPUT
+          echo "rpm_name=$(basename $RPM_FILE)" >> $GITHUB_OUTPUT
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-package
+          path: ${{ steps.find_rpm.outputs.rpm_file }}
+          if-no-files-found: error
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dnf install -y gh
+          gh release upload ${{ github.event.release.tag_name }} \
+            ${{ steps.find_rpm.outputs.rpm_file }} \
+            --clobber
