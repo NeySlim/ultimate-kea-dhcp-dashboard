@@ -426,3 +426,10 @@ ultimate-dashboard/
 - **Main file**: Reduced by ~500 lines through modularization
 - **New modules**: 5 focused, reusable components
 - **Documentation**: 4 comprehensive guides added
+
+## [1.6.3] - 2026-01-02
+
+### Fixed
+- Fixed translations.json not included in packages
+- Fixed package installation errors due to missing files
+
