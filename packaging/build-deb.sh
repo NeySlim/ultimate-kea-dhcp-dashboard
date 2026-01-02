@@ -27,7 +27,12 @@ mkdir -p "$DEB_DIR/etc/systemd/system"
 
 # Copy application files
 cd ..
-cp -r bin lib static etc *.py *.sh requirements.txt VERSION "$DEB_DIR/opt/ultimate-kea-dashboard/"
+for dir in bin lib static etc; do
+    [ -d "$dir" ] && cp -r "$dir" "$DEB_DIR/opt/ultimate-kea-dashboard/"
+done
+for file in requirements.txt VERSION *.sh; do
+    [ -f "$file" ] && cp "$file" "$DEB_DIR/opt/ultimate-kea-dashboard/" 2>/dev/null || true
+done
 
 # Copy systemd service
 cp etc/ultimate-kea-dashboard.service "$DEB_DIR/etc/systemd/system/"

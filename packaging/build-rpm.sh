@@ -14,7 +14,9 @@ mkdir -p "$BUILD_DIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 cd ..
 tar czf "$BUILD_DIR/SOURCES/${PACKAGE_NAME}-${VERSION}.tar.gz" \
     --transform "s,^,${PACKAGE_NAME}-${VERSION}/," \
-    bin lib static etc *.py *.sh requirements.txt VERSION
+    --exclude='.git*' --exclude='packaging' --exclude='*.md' \
+    --exclude='logs' --exclude='data' --exclude='*.pyc' --exclude='__pycache__' \
+    .
 
 # Copy and update spec file
 cd packaging
