@@ -1,5 +1,38 @@
 # Changelog
 
+## [1.6.8] - 2026-01-02
+
+### 🎨 Interface Improvements
+- **NEW**: Theme preview colors on selection buttons
+  - Each theme button now displays its actual colors (background gradient, text, border)
+  - Visual preview helps users choose themes more easily
+  - Added hover effects (zoom, brightness increase)
+  - Active theme highlighted with white border
+
+- **NEW**: Harmonized premium footer
+  - Glassmorphism design with glassmorphism effect
+  - UKD logo with gradient glow animation
+  - GitHub icon with 360° rotation on hover
+  - Centered version badge
+  - Full-width layout (max 1600px) matching dashboard
+  - Consistent styling with settings panel
+  - Clean, minimalist design
+
+- **IMPROVED**: Better theme differentiation
+  - Ember: kept perfect (warm brown tones, copper orange)
+  - Vicuna: more caramel/warm brown (#2a1a0a → #3d2810)
+  - Proxmox: pure black/anthracite (#0d0d0d → #1f1f1f)
+  - All 8 themes now visually distinct
+
+### UI/UX
+- Theme buttons show gradient backgrounds from their actual theme colors
+- Border colors match theme accent colors
+- Smooth transitions and hover effects
+- Better visual feedback for theme selection
+- Professional, integrated footer branding
+
+---
+
 ## [1.6.7] - 2026-01-02
 
 ### ⚡ Optimisations Performance
