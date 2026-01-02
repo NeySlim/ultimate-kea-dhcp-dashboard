@@ -72,6 +72,10 @@ if ! id ultimate-kea-dashboard >/dev/null 2>&1; then
 fi
 
 %post
+# Create directories if they don't exist
+mkdir -p /etc/ultimate-kea-dashboard
+mkdir -p /var/log/ultimate-kea-dashboard
+
 # Set permissions
 chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /opt/ultimate-kea-dashboard
 chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /etc/ultimate-kea-dashboard
