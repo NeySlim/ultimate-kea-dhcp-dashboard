@@ -964,18 +964,12 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 
                 device_copy = device.copy()
                 
-                # device_icon is already set by get_dhcp_info_cached()
-                # No need to regenerate it here
-                
                 # Get enhanced data from scanner
                 with CACHE_LOCK:
                     enhanced = STATIC_DEVICE_ENHANCED_DATA.get(ip, {})
                     services = NETWORK_SCAN_RESULTS.get(ip, [])
                     is_scanning = SCAN_IN_PROGRESS.get(ip, False)
                     last_scan = LAST_SCAN_TIME.get(ip, 0)
-                
-                # Get custom icon HTML if available
-                custom_svg = get_custom_icon_svg(device_copy.get('hostname', ''))
                 
                 # Update with enhanced data if available
                 if enhanced.get('hostname') and device_copy.get('hostname') in ['N/A', None, '']:
@@ -984,6 +978,23 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                     device_copy['hw_address'] = enhanced['mac']
                 if enhanced.get('vendor') and device_copy.get('vendor') in ['Unknown', None, '']:
                     device_copy['vendor'] = enhanced['vendor']
+                
+                # Get custom icon HTML if available
+                custom_svg = get_custom_icon_svg(device_copy.get('hostname', ''))
+                
+                # Detect device type using ALL available information
+                hostname = device_copy.get('hostname', 'N/A')
+                vendor = device_copy.get('vendor', 'Unknown')
+                hw_address = device_copy.get('hw_address', 'N/A')
+                device_info = {}
+                snmp_info = enhanced.get('snmp_info')
+                if snmp_info and snmp_info.get('available'):
+                    device_info['snmp'] = snmp_info.get('sysDescr', '')
+                
+                device_icon, device_type, icon_name = get_device_type(hostname, vendor, hw_address, device_info)
+                device_copy['device_icon'] = device_icon
+                device_copy['device_type'] = device_type
+                device_copy['icon_name'] = icon_name
                 
                 # Format services with HTML links and icons
                 services_html = []
@@ -1249,26 +1260,37 @@ def generate_html(info, lang="fr"):
             # Last resort: try reverse DNS
             resolved = resolve_hostname(ip)
             hostname = resolved if resolved else "N/A"
-        hostname = escape(hostname)
+        hostname_display = escape(hostname)
         
         # MAC address from enhanced data or device data
         hw_address = enhanced.get('mac') or device.get('hw_address', 'N/A')
         
         # Vendor from enhanced data or device data
         vendor = enhanced.get('vendor') or device.get("vendor", "Unknown")
-        vendor = escape(vendor)
+        vendor_display = escape(vendor)
         
-        device_icon = device.get("device_icon", "🔧")
-        device_type = device.get("device_type", "Unknown")
-        
-        # Type badge
-        type_badge = f'<span class="badge badge-{device_cat}">{t.get(device_cat, device_cat.title())}</span>'
-        
-        # Get scan status and last scan time
+        # Get scan status and services first (needed for device detection)
         with CACHE_LOCK:
             services = NETWORK_SCAN_RESULTS.get(ip, [])
             is_scanning = SCAN_IN_PROGRESS.get(ip, False)
             last_scan = LAST_SCAN_TIME.get(ip, 0)
+        
+        # Build device_info for better detection
+        device_info = {}
+        snmp_info = enhanced.get('snmp_info')
+        if snmp_info and snmp_info.get('available'):
+            device_info['snmp'] = snmp_info.get('sysDescr', '')
+        
+        # Detect device type using ALL available information
+        device_icon, device_type, icon_name = get_device_type(
+            hostname, 
+            vendor, 
+            hw_address, 
+            device_info
+        )
+        
+        # Type badge
+        type_badge = f'<span class="badge badge-{device_cat}">{t.get(device_cat, device_cat.title())}</span>'
         
         # Calculate scan progress (Static Devices)
         if is_scanning:
@@ -1337,9 +1359,9 @@ def generate_html(info, lang="fr"):
             {icon_cell}
             <td>{type_badge}</td>
             <td>{escape(ip)}</td>
-            <td>{hostname}</td>
+            <td>{hostname_display}</td>
             <td>{escape(hw_address)}</td>
-            <td>{vendor}</td>
+            <td>{vendor_display}</td>
             <td style="font-size: 0.85em;">{scan_status_with_btn}</td>
             <td style="font-size: 0.9em;">{services_col}</td>
             <td>{escape(device.get('subnet', 'N/A'))}</td>
