@@ -11,7 +11,9 @@ override_dh_auto_install:
 	mkdir -p debian/ultimate-kea-dashboard/var/log/ultimate-kea-dashboard
 	
 	# Copy application files
-	cp -r bin lib static data debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/
+	cp -r bin lib static debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/
+	mkdir -p debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/data
+	cp -r data/* debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/data/ 2>/dev/null || true
 	cp start.sh requirements.txt VERSION debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/
 	
 	# Copy configuration

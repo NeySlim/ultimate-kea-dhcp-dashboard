@@ -17,8 +17,12 @@ try:
         TRANSLATIONS = json.load(f)
 except Exception as e:
     print(f"Error loading translations: {e}")
-    # Fallback to minimal English translations
+    # Fallback to minimal translations with both fr and en
     TRANSLATIONS = {
+        "fr": {
+            "title": "Tableau de bord DHCP",
+            "error": "Fichier de traduction introuvable"
+        },
         "en": {
             "title": "DHCP Dashboard",
             "error": "Translation file not found"
@@ -39,9 +43,11 @@ def get_translation(key, lang="fr"):
     """
     if lang in TRANSLATIONS and key in TRANSLATIONS[lang]:
         return TRANSLATIONS[lang][key]
-    # Fallback to French
-    if key in TRANSLATIONS["fr"]:
+    # Fallback to French, then English
+    if "fr" in TRANSLATIONS and key in TRANSLATIONS["fr"]:
         return TRANSLATIONS["fr"][key]
+    if "en" in TRANSLATIONS and key in TRANSLATIONS["en"]:
+        return TRANSLATIONS["en"][key]
     # Return key itself if no translation found
     return key
 
