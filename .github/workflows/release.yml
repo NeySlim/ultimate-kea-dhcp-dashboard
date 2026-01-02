@@ -42,10 +42,12 @@ jobs:
       - name: Build Arch package in container
         run: |
           docker run --rm -v "$PWD:/workspace" -w /workspace archlinux:latest bash -c "
-            pacman -Syu --noconfirm base-devel git
+            pacman -Syu --noconfirm base-devel git sudo
+            useradd -m builder
+            chown -R builder:builder /workspace
             cd packaging
             chmod +x build-arch.sh
-            ./build-arch.sh
+            su builder -c './build-arch.sh'
           "
       
       - name: Upload Arch package
