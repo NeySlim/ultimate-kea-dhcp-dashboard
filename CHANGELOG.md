@@ -1,13 +1,24 @@
 # Changelog
 
-## [1.6.2] - 2026-01-02
+## [1.6.5] - 2026-01-02
 
 ### Améliorations
-- Workflows de packaging séparés par distribution (DEB, RPM, Arch)
-- Correction des noms de release pour utiliser les tags de version
+- **NEW**: Système de mise à jour automatique depuis GitHub
+  - Détection automatique des nouvelles versions
+  - Bouton de mise à jour one-click dans l'interface
+  - Support des installations via git et via packages
+  - Préservation des modifications locales lors des mises à jour
+- **NEW**: Workflows de packaging séparés par distribution (DEB, RPM, Arch)
+  - Création automatique de packages natifs pour chaque distribution
+  - Nommage cohérent des releases avec les tags de version
+  - Indépendance des jobs pour éviter les échecs en cascade
 
 ### Corrections
-- Fix du workflow de création des packages
+- **FIXED**: Fichier translations.json manquant dans les packages
+- **FIXED**: Erreurs d'installation de packages dues à des fichiers manquants
+- **FIXED**: Scripts postinstall robustifiés avec création de répertoires manquants
+- **FIXED**: Chemins de fichiers problématiques dans tous les packages
+- **FIXED**: Workflow de création des packages
 
 ---
 
