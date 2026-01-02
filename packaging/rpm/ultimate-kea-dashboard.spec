@@ -49,10 +49,10 @@ mkdir -p $RPM_BUILD_ROOT/var/log/ultimate-kea-dashboard
 
 # Copy application files
 cp -r bin lib static $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/
+
+# Copy data directory with translations
 mkdir -p $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/data
-if [ -d data ]; then
-    cp -r data/* $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/data/ 2>/dev/null || true
-fi
+cp data/translations.json $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/data/
 for file in start.sh requirements.txt; do
     [ -f "$file" ] && cp "$file" $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/
 done
