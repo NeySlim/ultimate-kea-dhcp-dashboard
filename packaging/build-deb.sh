@@ -31,7 +31,7 @@ mkdir -p "$DEB_DIR/etc/systemd/system"
 
 # Copy application files from project root
 cd "$PROJECT_ROOT"
-for dir in bin lib static etc; do
+for dir in bin lib static data etc; do
     [ -d "$dir" ] && cp -r "$dir" "$DEB_DIR/opt/ultimate-kea-dashboard/"
 done
 for file in requirements.txt VERSION *.sh; do
