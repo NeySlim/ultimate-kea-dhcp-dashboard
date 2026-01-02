@@ -21,6 +21,7 @@ jobs:
           docker run --rm -v "$PWD:/workspace" -w /workspace archlinux:latest bash -c "
             pacman -Syu --noconfirm libarchive zstd
             cd packaging
+            rm -f *.pkg.tar.zst
             chmod +x build-arch.sh
             ./build-arch.sh
           "

@@ -21,6 +21,7 @@ jobs:
           docker run --rm -v "$PWD:/workspace" -w /workspace fedora:latest bash -c "
             dnf install -y rpm-build rpmdevtools
             cd packaging
+            rm -f *.rpm
             chmod +x build-rpm.sh
             ./build-rpm.sh
           "
