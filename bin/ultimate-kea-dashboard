@@ -1128,7 +1128,7 @@ def generate_html(info, lang="fr"):
             countdown_display = ''
         
         # Add pause button for individual scan (before status and countdown)
-        pause_btn = f'<button class="pauseIndividualBtn" data-ip="{ip}" title="Pause/Resume scan"><span class="pause-icon">⏸️</span></button>'
+        pause_btn = f'<button class="pauseIndividualBtn" data-ip="{ip}" title="Pause/Resume scan"><span class="pause-icon"></span></button>'
         scan_status_with_btn = f'{pause_btn}{scan_status}{countdown_display}'
         
         # Get scanned services
@@ -1246,7 +1246,7 @@ def generate_html(info, lang="fr"):
             countdown_display = ''
         
         # Add pause button for individual scan
-        pause_btn = f'<button class="pauseIndividualBtn" data-ip="{ip}" title="Pause/Resume scan"><span class="pause-icon">⏸️</span></button>'
+        pause_btn = f'<button class="pauseIndividualBtn" data-ip="{ip}" title="Pause/Resume scan"><span class="pause-icon"></span></button>'
         scan_status_with_btn = f'{pause_btn}{scan_status}{countdown_display}'
         
         # Get scanned services
@@ -1393,7 +1393,6 @@ def generate_html(info, lang="fr"):
                 background: rgba(45, 36, 36, 0.6);
                 margin-bottom: 20px;
                 border-radius: 4px;
-                overflow: hidden;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.2);
                 border: 1px solid rgba(208, 135, 112, 0.2);
                 font-size: 0.875rem;
@@ -1475,10 +1474,10 @@ def generate_html(info, lang="fr"):
                 padding: 8px;
                 min-width: 200px;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                left: 0;
-                top: 100%;
-                margin-top: 4px;
                 white-space: nowrap;
+                left: 100%;
+                top: 0;
+                margin-left: 5px;
             }}
             td:hover .services-tooltip {{
                 display: block;
@@ -1519,6 +1518,12 @@ def generate_html(info, lang="fr"):
                 font-size: 1.2em;
                 transition: all 0.2s;
             }}
+            #pauseScanBtn .pause-icon {{
+                display: inline-block;
+                vertical-align: middle;
+                width: 16px;
+                height: 16px;
+            }}
             .pauseIndividualBtn {{
                 border: none;
                 background: transparent;
@@ -1527,6 +1532,15 @@ def generate_html(info, lang="fr"):
                 padding: 2px;
                 margin-right: 5px;
                 transition: all 0.2s;
+            }}
+            .pauseIndividualBtn .pause-icon {{
+                display: inline-block;
+                vertical-align: middle;
+                width: 16px;
+                height: 16px;
+            }}
+            .pauseIndividualBtn:hover {{
+                transform: scale(1.1);
             }}
             .pauseIndividualBtn:disabled {{
                 cursor: not-allowed;
@@ -1739,7 +1753,7 @@ def generate_html(info, lang="fr"):
                         </p>
                         <p class="timestamp">{t['last_update']}: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
                         <p style="display: flex; align-items: center; gap: 15px;">
-                            <button id="pauseScanBtn" title="Mettre en pause le scan"><span class="pause-icon">⏸️</span></button>
+                            <button id="pauseScanBtn" title="Mettre en pause le scan"><span class="pause-icon"></span></button>
                             <span class="scan-status scanning" id="scanStatus">Scan réseau actif</span>
                             <button id="settingsBtn">⚙️ {t['settings']}</button>
                         </p>
@@ -1844,6 +1858,12 @@ def generate_html(info, lang="fr"):
                         <button class="theme-option" data-theme="pulse">
                             Pulse
                         </button>
+                        <button class="theme-option" data-theme="vicuna">
+                            Vicuna
+                        </button>
+                        <button class="theme-option" data-theme="proxmox">
+                            Proxmox
+                        </button>
                     </div>
                 </div>
                 <div style="margin: 15px 0; padding-top: 15px; border-top: 1px solid #4c566a;">
@@ -1883,11 +1903,11 @@ def generate_html(info, lang="fr"):
                     </tr>
                 </thead>
                 <tbody>
-                    {pools_html}
+                    <tr><td colspan="3"><em>{t.get('loading', 'Chargement...')}</em></td></tr>
                 </tbody>
             </table>
             
-            <h2 id="dhcpClientsHeader">{t['dhcp_clients']} ({len(info.get('leases', []))} {t['clients']})</h2>
+            <h2 id="dhcpClientsHeader">{t['dhcp_clients']} (0 {t['clients']})</h2>
             <table id="leasesTable">
                 <thead>
                     <tr>
@@ -1904,11 +1924,11 @@ def generate_html(info, lang="fr"):
                     </tr>
                 </thead>
                 <tbody>
-                    {leases_html}
+                    <tr><td colspan="10"><em>{t.get('loading', 'Chargement...')}</em></td></tr>
                 </tbody>
             </table>
             
-            <h2 id="staticDevicesHeader">{t['static_devices']} ({len(info.get('static_devices', []))} {t['devices']})</h2>
+            <h2 id="staticDevicesHeader">{t['static_devices']} (0 {t['devices']})</h2>
             <table id="staticDevicesTable">
                 <thead>
                     <tr>
@@ -1924,7 +1944,7 @@ def generate_html(info, lang="fr"):
                     </tr>
                 </thead>
                 <tbody>
-                    {static_devices_html}
+                    <tr><td colspan="9"><em>{t.get('loading', 'Chargement...')}</em></td></tr>
                 </tbody>
             </table>
         </div>
@@ -1982,6 +2002,25 @@ def generate_html(info, lang="fr"):
                 return null;
             }}
             
+            // Update control button icons with SVG
+            function updateControlButtonIcons() {{
+                const icons = themeIcons[currentTheme];
+                if (!icons) return;
+                
+                // Update all pause icons
+                const pauseIcons = document.querySelectorAll('.pause-icon');
+                pauseIcons.forEach(icon => {{
+                    const btn = icon.closest('button');
+                    const isPaused = btn && btn.classList.contains('paused');
+                    
+                    if (isPaused && icons['play']) {{
+                        icon.innerHTML = icons['play'];
+                    }} else if (!isPaused && icons['pause']) {{
+                        icon.innerHTML = icons['pause'];
+                    }}
+                }});
+            }}
+            
             // Replace all emoji icons with SVG icons on page load
             function replaceAllIconsWithSVG() {{
                 const iconCells = document.querySelectorAll('.device-icon-cell[data-icon-name]');
@@ -1998,6 +2037,9 @@ def generate_html(info, lang="fr"):
                         }}
                     }}
                 }});
+                
+                // Also update control button icons
+                updateControlButtonIcons();
             }}
 
             
@@ -2143,7 +2185,9 @@ def generate_html(info, lang="fr"):
                 frost: {{ bg_primary: '#2e3440', bg_secondary: '#3b4252', text_primary: '#eceff4', accent_primary: '#7cb0c8', accent_secondary: '#83b5b0', success: '#a3be8c', error: '#bf616a', info: '#5e81ac', border: '#4c566a', hover: '#434c5e', scrollbar: '#88c0d0', font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", th_shadow: '0 2px 8px rgba(136,192,208,0.15)', th_bg: 'rgba(124,176,200,0.1)', th_text: '#8fbcbb' }},
                 blossom: {{ bg_primary: '#1e1e2e', bg_secondary: '#2d2a3e', text_primary: '#e5c7ed', accent_primary: '#d88c92', accent_secondary: '#e39b6f', success: '#a6da95', error: '#ed8796', info: '#8aadf4', border: '#494d64', hover: '#363a4f', scrollbar: '#ee99a0', font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", th_shadow: '0 2px 8px rgba(238,153,160,0.18)', th_bg: 'rgba(216,140,146,0.1)', th_text: '#f5a97f' }},
                 clarity: {{ bg_primary: '#ffffff', bg_secondary: '#f5f5f5', text_primary: '#1a1a1a', accent_primary: '#0070DD', accent_secondary: '#0095EE', success: '#00C853', error: '#E53935', info: '#0080FF', border: '#e0e0e0', hover: '#eeeeee', scrollbar: '#0080FF', font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", th_shadow: '0 2px 4px rgba(0,112,221,0.12)', th_bg: 'rgba(0,112,221,0.06)', th_text: '#0070DD' }},
-                pulse: {{ bg_primary: '#0c0d0f', bg_secondary: '#161b22', text_primary: '#c9d1d9', text_secondary: '#8b949e', accent_primary: '#00ab44', accent_secondary: '#35d07f', success: '#00ab44', error: '#ff4136', info: '#00b5db', border: '#21262d', hover: '#1c2128', scrollbar: '#00ab44', font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", th_shadow: '0 1px 3px rgba(0,0,0,0.3)', th_bg: '#161b22', th_text: '#8b949e' }}
+                pulse: {{ bg_primary: '#0c0d0f', bg_secondary: '#161b22', text_primary: '#c9d1d9', text_secondary: '#8b949e', accent_primary: '#00ab44', accent_secondary: '#35d07f', success: '#00ab44', error: '#ff4136', info: '#00b5db', border: '#21262d', hover: '#1c2128', scrollbar: '#00ab44', font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", th_shadow: '0 1px 3px rgba(0,0,0,0.3)', th_bg: '#161b22', th_text: '#8b949e' }},
+                vicuna: {{ bg_primary: '#1a1410', bg_secondary: '#2b2218', text_primary: '#e8e1d5', accent_primary: '#d97536', accent_secondary: '#f0ad4e', success: '#5cb85c', error: '#d9534f', info: '#5bc0de', border: '#3d3228', hover: '#362d23', scrollbar: '#d97536', font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", th_shadow: '0 2px 8px rgba(217,117,54,0.18)', th_bg: 'rgba(217,117,54,0.15)', th_text: '#f0ad4e' }},
+                proxmox: {{ bg_primary: '#1a1a1a', bg_secondary: '#2b2b2b', text_primary: '#f5f5f5', accent_primary: '#e57000', accent_secondary: '#ff8c00', success: '#5cb85c', error: '#d9534f', info: '#5bc0de', border: '#3d3d3d', hover: '#333333', scrollbar: '#e57000', font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", th_shadow: '0 2px 8px rgba(229,112,0,0.2)', th_bg: 'rgba(229,112,0,0.12)', th_text: '#ff8c00' }}
             }};
             
             // Apply theme CSS
@@ -2365,6 +2409,11 @@ def generate_html(info, lang="fr"):
             
             // Get themed pause icon SVG
             function getThemedPauseIcon() {{
+                const icons = themeIcons[currentTheme];
+                if (icons && icons['pause']) {{
+                    return icons['pause'];
+                }}
+                // Fallback to simple SVG
                 const theme = themes[settings.theme] || themes.ember;
                 return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect x="6" y="4" width="4" height="16" rx="1" fill="${{theme.info}}"/>
@@ -2374,6 +2423,11 @@ def generate_html(info, lang="fr"):
             
             // Get themed play icon SVG
             function getThemedPlayIcon() {{
+                const icons = themeIcons[currentTheme];
+                if (icons && icons['play']) {{
+                    return icons['play'];
+                }}
+                // Fallback to simple SVG
                 const theme = themes[settings.theme] || themes.ember;
                 return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M8 5v14l11-7z" fill="${{theme.success}}"/>
@@ -2815,6 +2869,10 @@ def generate_html(info, lang="fr"):
                         scanStatus = '<span title="' + t('never_scanned') + '" class="scan-icon">⭕</span> <span class="scan-text">' + t('never_scanned') + '</span>';
                     }}
                     
+                    // Add pause button for individual scan
+                    const pauseBtn = `<button class="pauseIndividualBtn" data-ip="${{lease.ip_address}}" title="Pause/Resume scan"><span class="pause-icon"></span></button>`;
+                    scanStatus = pauseBtn + scanStatus;
+                    
                     // Use pre-formatted services HTML from server - compact display with hover
                     let servicesCol = '';
                     if (lease.services_html && lease.services_html.length > 0) {{
@@ -2875,6 +2933,7 @@ def generate_html(info, lang="fr"):
                 
                 tbody.innerHTML = html;
                 applySavedSort('leasesTable');
+                updateControlButtonIcons();
             }}
             
             function updateStaticDevicesTableFromData(devices) {{
@@ -2910,6 +2969,10 @@ def generate_html(info, lang="fr"):
                     }} else {{
                         scanStatus = '<span title="' + t('never_scanned') + '" class="scan-icon">⭕</span> <span class="scan-text">' + t('never_scanned') + '</span>';
                     }}
+                    
+                    // Add pause button for individual scan
+                    const pauseBtn = `<button class="pauseIndividualBtn" data-ip="${{device.ip_address}}" title="Pause/Resume scan"><span class="pause-icon"></span></button>`;
+                    scanStatus = pauseBtn + scanStatus;
                     
                     // Use pre-formatted services HTML from server - compact display with hover
                     let servicesCol = '';
@@ -2969,6 +3032,7 @@ def generate_html(info, lang="fr"):
                 
                 tbody.innerHTML = html;
                 applySavedSort('staticDevicesTable');
+                updateControlButtonIcons();
             }}
             
             

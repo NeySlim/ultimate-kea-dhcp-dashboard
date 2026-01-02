@@ -100,18 +100,32 @@ THEMES = {
         "scrollbar": "#30363d"
     },
     "vicuna": {
-        "bg_primary": "#2b2520",
-        "bg_secondary": "#3d3530",
-        "text_primary": "#f5e6d3",
-        "text_secondary": "#d4c5b0",
-        "border": "#5a4a3f",
-        "success": "#8fbc8f",
-        "info": "#7db3d1",
-        "warning": "#e89f4f",
+        "bg_primary": "#3d3836",
+        "bg_secondary": "#504a47",
+        "text_primary": "#f5f5f5",
+        "text_secondary": "#d4d4d4",
+        "border": "#78706c",
+        "success": "#5cb85c",
+        "info": "#5bc0de",
+        "warning": "#f0ad4e",
         "error": "#d9534f",
         "accent_primary": "#d97536",
         "accent_secondary": "#c56426",
-        "scrollbar": "#5a4a3f"
+        "scrollbar": "#78706c"
+    },
+    "proxmox": {
+        "bg_primary": "#000000",
+        "bg_secondary": "#1a1a1a",
+        "text_primary": "#cfcfcf",
+        "text_secondary": "#8c8c8c",
+        "border": "#3d3d3d",
+        "success": "#5cb85c",
+        "info": "#5bc0de",
+        "warning": "#f0ad4e",
+        "error": "#d9534f",
+        "accent_primary": "#e57000",
+        "accent_secondary": "#ff8c00",
+        "scrollbar": "#3d3d3d"
     }
 }
 
@@ -218,5 +232,29 @@ def get_theme_css(theme_name="ember"):
         }}
         ::-webkit-scrollbar-track {{
             background: {t['bg_primary']};
+        }}
+        .pauseIndividualBtn {{
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 4px 8px;
+            margin-right: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }}
+        .pauseIndividualBtn:hover {{
+            opacity: 1;
+        }}
+        .pause-icon::before {{
+            content: "▶";
+            font-size: 14px;
+            color: {t['info']};
+        }}
+        .pauseIndividualBtn.paused .pause-icon::before {{
+            content: "⏸";
+            color: {t['warning']};
         }}
     """

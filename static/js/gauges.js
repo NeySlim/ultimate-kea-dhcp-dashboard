@@ -77,7 +77,7 @@ function initGauges(themes, settings) {
         
         // Start interval with configured refresh rate
         gaugesInterval = setInterval(updateGauges, settings.refreshInterval || 1000);
-        console.log(`Gauges cycle started: ${{settings.refreshInterval || 1000}}ms`);
+        console.log(`Gauges cycle started: ${settings.refreshInterval || 1000}ms`);
     }
     
     // Initial start
