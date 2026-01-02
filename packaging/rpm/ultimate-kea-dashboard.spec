@@ -1,5 +1,5 @@
 Name:           ultimate-kea-dashboard
-Version:        1.6.0
+Version:        VERSION
 Release:        1%{?dist}
 Summary:        Modern web dashboard for Kea DHCP Server
 
