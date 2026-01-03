@@ -1179,6 +1179,15 @@ def generate_html(info, lang="fr"):
     # Get system hostname
     system_hostname = socket.gethostname()
     
+    # Get version from VERSION file
+    version = "1.6.9"
+    try:
+        version_file = Path('/opt/ukd/VERSION')
+        if version_file.exists():
+            version = version_file.read_text().strip()
+    except:
+        pass
+    
     pools_html = ""
     for pool in info.get("pools", []):
         pools_html += f"""
@@ -2254,7 +2263,7 @@ def generate_html(info, lang="fr"):
                             <span>NeySlim</span>
                         </a>
                     </div>
-                    <span class="ukd-version">v{info.get('version', '1.6.8')}</span>
+                    <span class="ukd-version">v{version}</span>
                 </div>
             </div>
         </footer>
