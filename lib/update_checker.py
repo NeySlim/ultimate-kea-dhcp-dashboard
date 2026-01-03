@@ -7,7 +7,7 @@ from pathlib import Path
 
 # Cache for GitHub API responses (to avoid rate limiting)
 _VERSION_CACHE = {
-    'latest_version': None,
+    'latest_version': '1.6.8',  # Pre-cache with current release
     'timestamp': 0,
     'cache_duration': 3600  # 1 hour cache
 }
@@ -76,11 +76,18 @@ def check_for_updates():
     current = get_current_version()
     latest = get_latest_version()
     
+    # If we have a cached version (even on error), don't report error
+    has_cached_version = _VERSION_CACHE.get('latest_version') is not None
+    
+    # Use cached version if API call failed
+    if latest is None and has_cached_version:
+        latest = _VERSION_CACHE.get('latest_version')
+    
     return {
         'current_version': current,
         'latest_version': latest or "unknown",
         'update_available': compare_versions(current, latest) > 0,
-        'error': latest is None
+        'error': latest is None  # Only error if no cache available
     }
 
 def detect_install_method():
