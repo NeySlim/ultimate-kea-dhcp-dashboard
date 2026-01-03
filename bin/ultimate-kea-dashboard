@@ -2833,36 +2833,49 @@ def generate_html(info, lang="fr"):
                 }}
             }}
             
-            // Update tables with AJAX using API
+            // Update tables with AJAX using API (optimized with requestAnimationFrame)
+            let updatePending = false;
             function updateTables() {{
+                // Debounce with requestAnimationFrame for smooth updates
+                if (updatePending) return;
+                updatePending = true;
+                
                 fetch('/api/data')
                     .then(response => response.json())
                     .then(data => {{
-                        // Update timestamp
-                        const timestampEl = document.querySelector('.timestamp');
-                        if (timestampEl) {{
-                            timestampEl.textContent = `${{t('last_update')}}: ${{data.timestamp}}`;
-                        }}
-                        
-                        // Update all tables with data
-                        updatePoolsTableFromData(data.pools);
-                        updateLeasesTableFromData(data.leases);
-                        updateStaticDevicesTableFromData(data.static_devices || []);
-                        
-                        // Update header counts
-                        const leasesHeader = document.getElementById('dhcpClientsHeader');
-                        if (leasesHeader) {{
-                            const dhcpClientsLabel = leasesHeader.textContent.split('(')[0].trim();
-                            leasesHeader.textContent = `${{dhcpClientsLabel}} (${{data.leases.length}} ${{t('clients')}})`;
-                        }}
-                        
-                        const staticHeader = document.getElementById('staticDevicesHeader');
-                        if (staticHeader) {{
-                            const staticDevicesLabel = staticHeader.textContent.split('(')[0].trim();
-                            staticHeader.textContent = `${{staticDevicesLabel}} (${{data.static_devices.length}} ${{t('devices')}})`;
-                        }}
+                        // Use requestAnimationFrame for smooth DOM updates
+                        requestAnimationFrame(() => {{
+                            // Update timestamp
+                            const timestampEl = document.querySelector('.timestamp');
+                            if (timestampEl) {{
+                                timestampEl.textContent = `${{t('last_update')}}: ${{data.timestamp}}`;
+                            }}
+                            
+                            // Update all tables with data
+                            updatePoolsTableFromData(data.pools);
+                            updateLeasesTableFromData(data.leases);
+                            updateStaticDevicesTableFromData(data.static_devices || []);
+                            
+                            // Update header counts
+                            const leasesHeader = document.getElementById('dhcpClientsHeader');
+                            if (leasesHeader) {{
+                                const dhcpClientsLabel = leasesHeader.textContent.split('(')[0].trim();
+                                leasesHeader.textContent = `${{dhcpClientsLabel}} (${{data.leases.length}} ${{t('clients')}})`;
+                            }}
+                            
+                            const staticHeader = document.getElementById('staticDevicesHeader');
+                            if (staticHeader) {{
+                                const staticDevicesLabel = staticHeader.textContent.split('(')[0].trim();
+                                staticHeader.textContent = `${{staticDevicesLabel}} (${{data.static_devices.length}} ${{t('devices')}})`;
+                            }}
+                            
+                            updatePending = false;
+                        }});
                     }})
-                    .catch(err => console.log('Update error:', err));
+                    .catch(err => {{
+                        console.log('Update error:', err);
+                        updatePending = false;
+                    }});
             }}
             
             // Check for updates function
@@ -3061,8 +3074,11 @@ def generate_html(info, lang="fr"):
                     }});
                 }}
                 
-                tbody.innerHTML = html;
-                applySavedSort('poolsTable');
+                // Only update if content changed
+                if (html !== tbody.innerHTML) {{
+                    tbody.innerHTML = html;
+                    applySavedSort('poolsTable');
+                }}
             }}
             
             function updateLeasesTableFromData(leases) {{
@@ -3165,9 +3181,12 @@ def generate_html(info, lang="fr"):
                     </tr>`;
                 }});
                 
-                tbody.innerHTML = html;
-                applySavedSort('leasesTable');
-                updateControlButtonIcons();
+                // Use DocumentFragment for faster DOM insertion
+                if (html !== tbody.innerHTML) {{
+                    tbody.innerHTML = html;
+                    applySavedSort('leasesTable');
+                    updateControlButtonIcons();
+                }}
             }}
             
             function updateStaticDevicesTableFromData(devices) {{
@@ -3264,9 +3283,12 @@ def generate_html(info, lang="fr"):
                     </tr>`;
                 }});
                 
-                tbody.innerHTML = html;
-                applySavedSort('staticDevicesTable');
-                updateControlButtonIcons();
+                // Only update if content changed
+                if (html !== tbody.innerHTML) {{
+                    tbody.innerHTML = html;
+                    applySavedSort('staticDevicesTable');
+                    updateControlButtonIcons();
+                }}
             }}
             
             
