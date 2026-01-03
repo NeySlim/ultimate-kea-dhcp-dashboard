@@ -724,8 +724,26 @@ def get_dhcp_info_cached():
 def update_dhcp_cache():
     """Continuous DHCP cache updater thread"""
     global LAST_UPDATE
+    
+    # Do first update immediately to populate cache before server starts
+    try:
+        print("[INFO] Performing initial cache population...")
+        info = get_dhcp_info()
+        static_devices = get_non_pool_ips_and_reservations(info.get("leases", []))
+        
+        with DHCP_CACHE_LOCK:
+            DHCP_INFO_CACHE["pools"] = info.get("pools", [])
+            DHCP_INFO_CACHE["leases"] = info.get("leases", [])
+            DHCP_INFO_CACHE["static_devices"] = static_devices
+            LAST_UPDATE = time.time()
+            print(f"[INFO] Initial cache ready: {len(DHCP_INFO_CACHE['leases'])} leases, {len(DHCP_INFO_CACHE['static_devices'])} static devices")
+    except Exception as e:
+        print(f"[ERROR] Initial cache population failed: {e}")
+    
+    # Continue with regular updates
     while True:
         try:
+            time.sleep(30)  # Wait 30 seconds before next update
             info = get_dhcp_info()
             static_devices = get_non_pool_ips_and_reservations(info.get("leases", []))
             
@@ -735,7 +753,6 @@ def update_dhcp_cache():
                 DHCP_INFO_CACHE["static_devices"] = static_devices
                 LAST_UPDATE = time.time()
                 print(f"[INFO] Cache updated: {len(DHCP_INFO_CACHE['leases'])} leases, {len(DHCP_INFO_CACHE['static_devices'])} static devices loaded")
-            time.sleep(30)  # Update every 30 seconds
         except Exception as e:
             print(f"[ERROR] Cache update failed: {e}")
             time.sleep(30)
@@ -2210,22 +2227,40 @@ def generate_html(info, lang="fr"):
             // Replace all emoji icons with SVG icons on page load
             function replaceAllIconsWithSVG() {{
                 const iconCells = document.querySelectorAll('.device-icon-cell[data-icon-name]');
-                iconCells.forEach(cell => {{
-                    const iconName = cell.getAttribute('data-icon-name');
-                    const svgIcon = getDeviceIconSVG(iconName);
-                    if (svgIcon) {{
-                        cell.innerHTML = svgIcon;
-                    }} else {{
-                        // Show emoji fallback if SVG not available
-                        const fallback = cell.querySelector('.emoji-fallback');
-                        if (fallback) {{
-                            fallback.style.display = 'inline';
+                
+                // Use requestAnimationFrame for non-blocking icon replacement
+                let index = 0;
+                function replaceNextBatch() {{
+                    const batchSize = 5; // Process 5 icons per frame
+                    const end = Math.min(index + batchSize, iconCells.length);
+                    
+                    for (let i = index; i < end; i++) {{
+                        const cell = iconCells[i];
+                        const iconName = cell.getAttribute('data-icon-name');
+                        const svgIcon = getDeviceIconSVG(iconName);
+                        if (svgIcon) {{
+                            cell.innerHTML = svgIcon;
+                        }} else {{
+                            // Show emoji fallback if SVG not available
+                            const fallback = cell.querySelector('.emoji-fallback');
+                            if (fallback) {{
+                                fallback.style.display = 'inline';
+                            }}
                         }}
                     }}
-                }});
+                    
+                    index = end;
+                    if (index < iconCells.length) {{
+                        requestAnimationFrame(replaceNextBatch);
+                    }} else {{
+                        // All icons replaced, update control buttons
+                        updateControlButtonIcons();
+                    }}
+                }}
                 
-                // Also update control button icons
-                updateControlButtonIcons();
+                if (iconCells.length > 0) {{
+                    requestAnimationFrame(replaceNextBatch);
+                }}
             }}
 
             
@@ -3296,13 +3331,14 @@ def generate_html(info, lang="fr"):
             document.addEventListener('DOMContentLoaded', async function() {{
                 loadSettings();
                 
-                // Load theme icons before starting updates
-                await loadThemeIcons(settings.theme || 'ember');
-                
-                // Replace all emoji icons with SVG immediately
-                replaceAllIconsWithSVG();
-                
+                // Start refresh cycle immediately (don't wait for icons)
                 startRefreshCycle();
+                
+                // Load theme icons in parallel (non-blocking)
+                loadThemeIcons(settings.theme || 'ember').then(() => {{
+                    // Replace emoji with SVG once icons loaded
+                    replaceAllIconsWithSVG();
+                }});
                 
                 // Check for software updates on page load
                 checkForUpdates();
