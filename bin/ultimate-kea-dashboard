@@ -2759,10 +2759,6 @@ def generate_html(info, lang="fr"):
                         -webkit-text-fill-color: transparent;
                         background-clip: text;
                     }}
-                    .ukd-separator {{
-                        color: ${{theme.text_secondary || theme.text_primary}};
-                        opacity: 0.3;
-                    }}
                     .ukd-author-link {{
                         color: ${{theme.text_primary}};
                         background: ${{theme.hover}};
