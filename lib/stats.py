@@ -4,15 +4,30 @@ import time
 
 
 _last_net = {'bytes_sent': 0, 'bytes_recv': 0, 'time': time.time()}
+_last_cpu = {'values': [0], 'time': 0}
+_stats_cache = {'data': None, 'time': 0}
+CACHE_TTL = 0.5  # Cache stats for 500ms to avoid constant CPU checks
 
 
 def get_system_stats():
-    """Get real-time system statistics"""
-    global _last_net
+    """Get real-time system statistics with caching"""
+    global _last_net, _last_cpu, _stats_cache
+    
+    current_time = time.time()
+    
+    # Return cached stats if fresh enough
+    if _stats_cache['data'] and (current_time - _stats_cache['time']) < CACHE_TTL:
+        return _stats_cache['data']
     
     try:
-        # CPU usage per core
-        cpu_percent = psutil.cpu_percent(interval=0.1, percpu=True)
+        # CPU usage per core (use interval=0 for instant, no blocking)
+        cpu_percent = psutil.cpu_percent(interval=0, percpu=True)
+        
+        # If all zeros (first call), use last known values
+        if sum(cpu_percent) == 0 and _last_cpu['values']:
+            cpu_percent = _last_cpu['values']
+        else:
+            _last_cpu = {'values': cpu_percent, 'time': current_time}
         
         # RAM usage (GB)
         mem = psutil.virtual_memory()
@@ -48,7 +63,7 @@ def get_system_stats():
         disk_total_gb = disk.total / (1024**3)
         disk_percent = (disk_used_gb / disk_total_gb) * 100  # Calculate from GB values
         
-        return {
+        stats_data = {
             "cpu_cores": [round(c, 1) for c in cpu_percent],
             "cpu_avg": round(sum(cpu_percent) / len(cpu_percent), 1),
             "ram": round(ram_percent, 1),
@@ -60,6 +75,11 @@ def get_system_stats():
             "disk_used_gb": round(disk_used_gb, 1),
             "disk_total_gb": round(disk_total_gb, 1)
         }
+        
+        # Cache the result
+        _stats_cache = {'data': stats_data, 'time': current_time}
+        
+        return stats_data
     except Exception as e:
         print(f"[ERROR] Failed to get system stats: {e}")
         import traceback
