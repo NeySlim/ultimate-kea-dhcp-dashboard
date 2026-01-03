@@ -1265,11 +1265,8 @@ def generate_html(info, lang="fr"):
             enhanced = STATIC_DEVICE_ENHANCED_DATA.get(ip, {})
         
         # Use enhanced data if available, fallback to device data
+        # DNS lookup is done by background scanner, not here (avoid blocking)
         hostname = enhanced.get('hostname') or device.get("hostname", "N/A")
-        if hostname == "N/A" or not hostname:
-            # Last resort: try reverse DNS
-            resolved = resolve_hostname(ip)
-            hostname = resolved if resolved else "N/A"
         hostname_display = escape(hostname)
         
         # MAC address from enhanced data or device data
