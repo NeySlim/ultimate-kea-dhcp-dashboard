@@ -19,6 +19,8 @@ import time
 import ipaddress
 import os
 import random
+import gzip
+import io
 from datetime import datetime
 from html import escape
 from pathlib import Path
@@ -914,6 +916,16 @@ def format_timestamp(timestamp):
 class KeaHandler(http.server.SimpleHTTPRequestHandler):
     """HTTP request handler for displaying Kea info"""
     
+    def _gzip_encode(self, content):
+        """Compress content with gzip if client supports it"""
+        accept_encoding = self.headers.get('Accept-Encoding', '')
+        if 'gzip' in accept_encoding and len(content) > 500:  # Only compress if >500 bytes
+            buf = io.BytesIO()
+            with gzip.GzipFile(fileobj=buf, mode='wb', compresslevel=6) as f:
+                f.write(content if isinstance(content, bytes) else content.encode())
+            return buf.getvalue(), True
+        return content if isinstance(content, bytes) else content.encode(), False
+    
     def do_GET(self):
         # Parse query parameters
         from urllib.parse import urlparse, parse_qs
@@ -924,12 +936,18 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
         if parsed.path == "/" or parsed.path == "/index.html":
             self.send_response(200)
             self.send_header("Content-type", "text/html; charset=utf-8")
-            self.end_headers()
             
             # Use cached info for fast initial load, update in background
             info = get_dhcp_info_cached()
             html = generate_html(info, lang)
-            self.wfile.write(html.encode())
+            
+            # Compress HTML if client supports gzip
+            content, is_gzipped = self._gzip_encode(html)
+            if is_gzipped:
+                self.send_header("Content-Encoding", "gzip")
+            self.send_header("Content-Length", str(len(content)))
+            self.end_headers()
+            self.wfile.write(content)
         elif parsed.path == "/api/data":
             # API endpoint for AJAX updates
             self.send_response(200)
@@ -1048,7 +1066,15 @@ class KeaHandler(http.server.SimpleHTTPRequestHandler):
                 'static_devices': static_devices,
                 'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
-            self.wfile.write(json.dumps(data).encode())
+            
+            # Compress JSON response
+            json_data = json.dumps(data)
+            content, is_gzipped = self._gzip_encode(json_data)
+            if is_gzipped:
+                self.send_header("Content-Encoding", "gzip")
+            self.send_header("Content-Length", str(len(content)))
+            self.end_headers()
+            self.wfile.write(content)
         elif parsed.path == "/api/update-status":
             # API endpoint for update checker
             self.send_response(200)
@@ -1896,6 +1922,30 @@ def generate_html(info, lang="fr"):
                 border: 1px solid;
                 font-size: 0.75em;
             }}
+            
+            /* Skeleton loader styles for progressive loading */
+            .skeleton {{
+                background: linear-gradient(90deg, rgba(45, 36, 36, 0.4) 25%, rgba(60, 48, 48, 0.5) 50%, rgba(45, 36, 36, 0.4) 75%);
+                background-size: 200% 100%;
+                animation: skeleton-loading 1.5s ease-in-out infinite;
+                border-radius: 4px;
+            }}
+            @keyframes skeleton-loading {{
+                0% {{ background-position: 200% 0; }}
+                100% {{ background-position: -200% 0; }}
+            }}
+            .skeleton-row {{
+                height: 40px;
+                margin: 8px 0;
+            }}
+            .skeleton-text {{
+                height: 16px;
+                width: 60%;
+                margin: 8px 0;
+            }}
+            .hidden {{
+                display: none !important;
+            }}
         </style>
         <style id="themeStyle">
             {get_theme_css('ember')}
@@ -2107,8 +2157,44 @@ def generate_html(info, lang="fr"):
                         <th style="cursor: pointer;">{t['duration']}</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr><td colspan="10"><em>{t.get('loading', 'Chargement...')}</em></td></tr>
+                <tbody id="leasesTableBody">
+                    <!-- Skeleton loaders for initial load -->
+                    <tr class="skeleton-loader">
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                    </tr>
+                    <tr class="skeleton-loader">
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                    </tr>
+                    <tr class="skeleton-loader">
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                    </tr>
                 </tbody>
             </table>
             
@@ -2127,7 +2213,31 @@ def generate_html(info, lang="fr"):
                         <th data-column="subnet" style="cursor: pointer;">{t['subnet']}</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="staticDevicesTableBody">
+                    <!-- Skeleton loaders for initial load -->
+                    <tr class="skeleton-loader">
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                    </tr>
+                    <tr class="skeleton-loader">
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                        <td><div class="skeleton skeleton-text"></div></td>
+                    </tr>
+>
                     <tr><td colspan="9"><em>{t.get('loading', 'Chargement...')}</em></td></tr>
                 </tbody>
             </table>
@@ -2880,6 +2990,9 @@ def generate_html(info, lang="fr"):
                     .then(data => {{
                         // Use requestAnimationFrame for smooth DOM updates
                         requestAnimationFrame(() => {{
+                            // Remove skeleton loaders on first load
+                            document.querySelectorAll('.skeleton-loader').forEach(el => el.remove());
+                            
                             // Update timestamp
                             const timestampEl = document.querySelector('.timestamp');
                             if (timestampEl) {{
