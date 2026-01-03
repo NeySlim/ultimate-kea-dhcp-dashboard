@@ -1,6 +1,6 @@
 Name:           ultimate-kea-dashboard
 Version:        @VERSION@
-Release:        1%{?dist}
+Release:        @RELEASE@%{?dist}
 Summary:        Modern web dashboard for Kea DHCP Server
 
 License:        MIT
