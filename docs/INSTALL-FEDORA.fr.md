@@ -62,19 +62,19 @@ Ou copier manuellement les fichiers :
 
 ```bash
 # Créer les répertoires
-sudo mkdir -p /opt/ultimate-kea-dashboard/{bin,lib,static,data,logs,etc}
+sudo mkdir -p /opt/ukd/{bin,lib,static,data,logs,etc}
 sudo mkdir -p /etc/ultimate-dashboard
 
 # Copier les fichiers
-sudo cp -r bin/* /opt/ultimate-kea-dashboard/bin/
-sudo cp -r lib/* /opt/ultimate-kea-dashboard/lib/
-sudo cp -r static/* /opt/ultimate-kea-dashboard/static/
-sudo cp -r data/* /opt/ultimate-kea-dashboard/data/
-sudo cp start.sh /opt/ultimate-kea-dashboard/
+sudo cp -r bin/* /opt/ukd/bin/
+sudo cp -r lib/* /opt/ukd/lib/
+sudo cp -r static/* /opt/ukd/static/
+sudo cp -r data/* /opt/ukd/data/
+sudo cp start.sh /opt/ukd/
 
 # Rendre les scripts exécutables
-sudo chmod +x /opt/ultimate-kea-dashboard/bin/ultimate-dashboard
-sudo chmod +x /opt/ultimate-kea-dashboard/start.sh
+sudo chmod +x /opt/ukd/bin/ultimate-dashboard
+sudo chmod +x /opt/ukd/start.sh
 ```
 
 ## Configuration du pare-feu
@@ -109,8 +109,8 @@ sestatus
 sudo semanage port -a -t http_port_t -p tcp 8089
 
 # Si nécessaire, ajuster les contextes
-sudo chcon -R -t bin_t /opt/ultimate-kea-dashboard/bin/
-sudo chcon -R -t lib_t /opt/ultimate-kea-dashboard/lib/
+sudo chcon -R -t bin_t /opt/ukd/bin/
+sudo chcon -R -t lib_t /opt/ukd/lib/
 ```
 
 En cas de problèmes, vérifiez les logs SELinux :
@@ -161,8 +161,8 @@ After=network.target kea-dhcp4.service
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/ultimate-kea-dashboard
-ExecStart=/usr/bin/python3 /opt/ultimate-kea-dashboard/bin/ultimate-dashboard
+WorkingDirectory=/opt/ukd
+ExecStart=/usr/bin/python3 /opt/ukd/bin/ultimate-dashboard
 Restart=always
 RestartSec=10
 
@@ -240,10 +240,10 @@ sudo systemctl restart kea-dhcp4
 sudo journalctl -u ultimate-dashboard -n 50
 
 # Vérifier les permissions
-ls -la /opt/ultimate-kea-dashboard/
+ls -la /opt/ukd/
 
 # Tester manuellement
-sudo python3 /opt/ultimate-kea-dashboard/bin/ultimate-dashboard
+sudo python3 /opt/ukd/bin/ultimate-dashboard
 ```
 
 ### Problèmes de permission
@@ -296,7 +296,7 @@ sudo systemctl stop ultimate-dashboard
 sudo systemctl disable ultimate-dashboard
 
 # Supprimer les fichiers
-sudo rm -rf /opt/ultimate-kea-dashboard
+sudo rm -rf /opt/ukd
 sudo rm -rf /etc/ultimate-dashboard
 sudo rm /etc/systemd/system/ultimate-dashboard.service
 

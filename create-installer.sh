@@ -15,7 +15,7 @@ cat > "$OUTPUT" << 'HEADER'
 
 set -e
 
-INSTALL_DIR="/opt/ultimate-kea-dashboard"
+INSTALL_DIR="/opt/ukd"
 TEMP_DIR=$(mktemp -d)
 
 echo "=================================================="

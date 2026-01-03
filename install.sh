@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 BOLD='\033[1m'
 
 # Installation paths
-INSTALL_DIR="/opt/ultimate-kea-dashboard"
+INSTALL_DIR="/opt/ukd"
 CONFIG_DIR="/etc/ultimate-kea-dashboard"
 SYSTEMD_DIR="/etc/systemd/system"
 

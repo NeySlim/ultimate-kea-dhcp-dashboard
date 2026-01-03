@@ -6,7 +6,7 @@ from pathlib import Path
 
 def get_current_version():
     """Get current installed version"""
-    version_file = Path('/opt/ultimate-kea-dashboard/VERSION')
+    version_file = Path('/opt/ukd/VERSION')
     if version_file.exists():
         return version_file.read_text().strip()
     return "unknown"
@@ -62,7 +62,7 @@ def check_for_updates():
 
 def detect_install_method():
     """Detect how the dashboard was installed"""
-    install_dir = Path('/opt/ultimate-kea-dashboard')
+    install_dir = Path('/opt/ukd')
     
     # Check for git installation
     if (install_dir / '.git').exists():
@@ -214,7 +214,7 @@ def update_via_package(package_type):
 def perform_update():
     """Perform the dashboard update"""
     try:
-        install_dir = Path('/opt/ultimate-kea-dashboard')
+        install_dir = Path('/opt/ukd')
         install_method = detect_install_method()
         
         # Perform update based on installation method

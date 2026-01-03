@@ -68,7 +68,7 @@ sudo bash install.sh
 
 ## Configuration
 
-Edit `/opt/ultimate-kea-dashboard/etc/ultimate-kea-dashboard.conf`:
+Edit `/opt/ukd/etc/ultimate-kea-dashboard.conf`:
 
 ```ini
 [DEFAULT]

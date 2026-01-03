@@ -73,8 +73,8 @@ pip3 install --user psutil
 ### Option 3 : Environnement Virtuel
 
 ```bash
-python3 -m venv /opt/ultimate-kea-dashboard/venv
-source /opt/ultimate-kea-dashboard/venv/bin/activate
+python3 -m venv /opt/ukd/venv
+source /opt/ukd/venv/bin/activate
 pip install psutil
 ```
 

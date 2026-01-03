@@ -26,16 +26,16 @@ sed -i "s/VERSION/${VERSION}/g" "$DEB_DIR/DEBIAN/control"
 [ -f "$SCRIPT_DIR/debian/prerm" ] && cp "$SCRIPT_DIR/debian/prerm" "$DEB_DIR/DEBIAN/" && chmod 755 "$DEB_DIR/DEBIAN/prerm"
 
 # Create installation directories
-mkdir -p "$DEB_DIR/opt/ultimate-kea-dashboard"
+mkdir -p "$DEB_DIR/opt/ukd"
 mkdir -p "$DEB_DIR/etc/systemd/system"
 
 # Copy application files from project root
 cd "$PROJECT_ROOT"
 for dir in bin lib static data etc; do
-    [ -d "$dir" ] && cp -r "$dir" "$DEB_DIR/opt/ultimate-kea-dashboard/"
+    [ -d "$dir" ] && cp -r "$dir" "$DEB_DIR/opt/ukd/"
 done
 for file in requirements.txt VERSION *.sh; do
-    [ -f "$file" ] && cp "$file" "$DEB_DIR/opt/ultimate-kea-dashboard/" 2>/dev/null || true
+    [ -f "$file" ] && cp "$file" "$DEB_DIR/opt/ukd/" 2>/dev/null || true
 done
 
 # Copy systemd service

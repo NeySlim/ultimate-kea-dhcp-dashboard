@@ -175,8 +175,8 @@ After=network.target kea-dhcp4.service
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/ultimate-kea-dashboard
-ExecStart=/usr/bin/python /opt/ultimate-kea-dashboard/bin/ultimate-dashboard
+WorkingDirectory=/opt/ukd
+ExecStart=/usr/bin/python /opt/ukd/bin/ultimate-dashboard
 Restart=always
 RestartSec=10
 
@@ -326,7 +326,7 @@ sudo journalctl -u ultimate-dashboard -xe
 ldd /usr/bin/python
 
 # Tester manuellement
-sudo python /opt/ultimate-kea-dashboard/bin/ultimate-dashboard
+sudo python /opt/ukd/bin/ultimate-dashboard
 ```
 
 ### Conflit de ports
@@ -376,7 +376,7 @@ Group=ultimate-dashboard
 
 Ajuster les permissions :
 ```bash
-sudo chown -R ultimate-dashboard:ultimate-dashboard /opt/ultimate-kea-dashboard
+sudo chown -R ultimate-dashboard:ultimate-dashboard /opt/ukd
 sudo chown -R ultimate-dashboard:ultimate-dashboard /etc/ultimate-dashboard
 ```
 
@@ -406,7 +406,7 @@ sudo systemctl stop ultimate-dashboard
 sudo systemctl disable ultimate-dashboard
 
 # Supprimer les fichiers
-sudo rm -rf /opt/ultimate-kea-dashboard
+sudo rm -rf /opt/ukd
 sudo rm -rf /etc/ultimate-dashboard
 sudo rm /etc/systemd/system/ultimate-dashboard.service
 

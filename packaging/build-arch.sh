@@ -30,13 +30,13 @@ cd "$BUILD_DIR"
 sed -i "s/pkgver=.*/pkgver=${VERSION}/" PKGBUILD
 
 # Create package structure manually
-mkdir -p "${PKG_DIR}/opt/ultimate-kea-dashboard"
+mkdir -p "${PKG_DIR}/opt/ukd"
 mkdir -p "${PKG_DIR}/etc/ultimate-kea-dashboard"
 mkdir -p "${PKG_DIR}/var/log/ultimate-kea-dashboard"
 mkdir -p "${PKG_DIR}/usr/lib/systemd/system"
 
 # Copy application files
-cp -r "$SRC_DIR"/* "${PKG_DIR}/opt/ultimate-kea-dashboard/"
+cp -r "$SRC_DIR"/* "${PKG_DIR}/opt/ukd/"
 
 # Copy systemd service
 cp "$SRC_DIR/etc/ultimate-kea-dashboard.service" "${PKG_DIR}/usr/lib/systemd/system/"

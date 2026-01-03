@@ -156,7 +156,7 @@ curl http://localhost:8089
 sudo journalctl -u ultimate-dashboard -n 50 --no-pager
 
 # Tester manuellement
-sudo python3 /opt/ultimate-kea-dashboard/bin/ultimate-dashboard
+sudo python3 /opt/ukd/bin/ultimate-dashboard
 ```
 
 ### Python manquant

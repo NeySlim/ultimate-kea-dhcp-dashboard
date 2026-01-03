@@ -12,7 +12,7 @@ MAC_VENDOR_DB = None
 OUI_UPDATE_INTERVAL = timedelta(days=30)  # Update OUI database every 30 days
 
 
-def download_oui_database(oui_file='/opt/ultimate-kea-dashboard/data/oui.json'):
+def download_oui_database(oui_file='/opt/ukd/data/oui.json'):
     """Download and update OUI database from IEEE"""
     print(f"[INFO] Downloading OUI database...")
     
@@ -47,7 +47,7 @@ def download_oui_database(oui_file='/opt/ultimate-kea-dashboard/data/oui.json'):
         return {}
 
 
-def check_and_update_oui_db(oui_file='/opt/ultimate-kea-dashboard/data/oui.json'):
+def check_and_update_oui_db(oui_file='/opt/ukd/data/oui.json'):
     """Check if OUI database needs updating and update if necessary"""
     oui_path = Path(oui_file)
     
@@ -70,7 +70,7 @@ def check_and_update_oui_db(oui_file='/opt/ultimate-kea-dashboard/data/oui.json'
     return None
 
 
-def load_mac_vendor_db(oui_file='/opt/ultimate-kea-dashboard/data/oui.json'):
+def load_mac_vendor_db(oui_file='/opt/ukd/data/oui.json'):
     """Load MAC vendor database from local OUI JSON file"""
     global MAC_VENDOR_DB
     

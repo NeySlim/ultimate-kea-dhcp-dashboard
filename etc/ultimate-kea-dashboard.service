@@ -5,8 +5,8 @@ After=network.target kea-dhcp4.service
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/ultimate-kea-dashboard
-ExecStart=/usr/bin/python3 /opt/ultimate-kea-dashboard/bin/ultimate-kea-dashboard
+WorkingDirectory=/opt/ukd
+ExecStart=/usr/bin/python3 /opt/ukd/bin/ultimate-kea-dashboard
 Restart=always
 RestartSec=10
 

@@ -269,7 +269,7 @@ sudo semanage port -a -t http_port_t -p tcp 8089
 
 ```bash
 # Créer un profil AppArmor si nécessaire
-sudo aa-complain /opt/ultimate-kea-dashboard/bin/ultimate-dashboard
+sudo aa-complain /opt/ukd/bin/ultimate-dashboard
 ```
 
 ## Ressources

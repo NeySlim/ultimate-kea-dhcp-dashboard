@@ -342,6 +342,6 @@ Tous les chemins système utilisés sont conformes au FHS (Filesystem Hierarchy 
 - Leases Kea : `/var/lib/kea/`
 - Socket Kea : `/run/kea/`
 - Configuration Dashboard : `/etc/ultimate-dashboard/`
-- Installation Dashboard : `/opt/ultimate-kea-dashboard/`
+- Installation Dashboard : `/opt/ukd/`
 
 **Aucune adaptation de chemins n'est nécessaire entre distributions.**

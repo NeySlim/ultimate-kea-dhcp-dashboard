@@ -53,7 +53,7 @@ sudo bash install.sh
 
 ## Configuration
 
-Éditez `/opt/ultimate-kea-dashboard/etc/ultimate-kea-dashboard.conf`:
+Éditez `/opt/ukd/etc/ultimate-kea-dashboard.conf`:
 
 ```ini
 [DEFAULT]
@@ -270,7 +270,7 @@ sudo journalctl -u ultimate-dashboard -n 50
 sudo nano /etc/ultimate-dashboard/ultimate-dashboard.conf
 
 # Tester manuellement
-sudo python3 /opt/ultimate-kea-dashboard/bin/ultimate-dashboard
+sudo python3 /opt/ukd/bin/ultimate-dashboard
 ```
 
 ### Pas de baux affichés
