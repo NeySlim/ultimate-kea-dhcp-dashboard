@@ -1,8 +1,10 @@
 """Update checker for Ultimate Kea Dashboard"""
 import urllib.request
+import urllib.error
 import json
 import subprocess
 import time
+import re
 from pathlib import Path
 
 # Cache for GitHub API responses (to avoid rate limiting)
@@ -19,6 +21,25 @@ def get_current_version():
         return version_file.read_text().strip()
     return "unknown"
 
+def get_latest_version_from_web():
+    """Fallback: Get latest version by scraping GitHub releases page"""
+    try:
+        import re
+        url = "https://github.com/NeySlim/ultimate-kea-dhcp-dashboard/releases/latest"
+        req = urllib.request.Request(url)
+        req.add_header('User-Agent', 'Mozilla/5.0 (compatible; Ultimate-Kea-Dashboard)')
+        
+        with urllib.request.urlopen(req, timeout=10) as response:
+            html = response.read().decode()
+            # Look for tag/vX.Y.Z pattern
+            match = re.search(r'tag/v([0-9]+\.[0-9]+\.[0-9]+)', html)
+            if match:
+                return match.group(1)
+        return None
+    except Exception as e:
+        print(f"[ERROR] Web scraping fallback failed: {e}")
+        return None
+
 def get_latest_version():
     """Get latest version from GitHub releases (with 1-hour cache)"""
     global _VERSION_CACHE
@@ -29,6 +50,7 @@ def get_latest_version():
         current_time - _VERSION_CACHE['timestamp'] < _VERSION_CACHE['cache_duration']):
         return _VERSION_CACHE['latest_version']
     
+    # Try API first
     try:
         url = "https://api.github.com/repos/NeySlim/ultimate-kea-dhcp-dashboard/releases/latest"
         req = urllib.request.Request(url)
@@ -43,10 +65,22 @@ def get_latest_version():
             _VERSION_CACHE['timestamp'] = current_time
             
             return version
+    except urllib.error.HTTPError as e:
+        if e.code == 403:  # Rate limit
+            print(f"[WARN] GitHub API rate limit, trying web scraping fallback...")
+            version = get_latest_version_from_web()
+            if version:
+                # Update cache with scraped version
+                _VERSION_CACHE['latest_version'] = version
+                _VERSION_CACHE['timestamp'] = current_time
+                return version
+        else:
+            print(f"[ERROR] Failed to check for updates: {e}")
     except Exception as e:
         print(f"[ERROR] Failed to check for updates: {e}")
-        # Return cached version if available, even if expired
-        return _VERSION_CACHE.get('latest_version')
+    
+    # Return cached version if available, even if expired
+    return _VERSION_CACHE.get('latest_version')
 
 def compare_versions(current, latest):
     """Compare version strings"""
