@@ -42,21 +42,21 @@ Features include:
 rm -rf $RPM_BUILD_ROOT
 
 # Create directories
-mkdir -p $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard
+mkdir -p $RPM_BUILD_ROOT/opt/ukd
 mkdir -p $RPM_BUILD_ROOT/etc/ultimate-kea-dashboard
 mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/system
 mkdir -p $RPM_BUILD_ROOT/var/log/ultimate-kea-dashboard
 
 # Copy application files
-cp -r bin lib static $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/
+cp -r bin lib static $RPM_BUILD_ROOT/opt/ukd/
 
 # Copy data directory with translations
-mkdir -p $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/data
-cp data/translations.json $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/data/
+mkdir -p $RPM_BUILD_ROOT/opt/ukd/data
+cp data/translations.json $RPM_BUILD_ROOT/opt/ukd/data/
 for file in start.sh requirements.txt; do
-    [ -f "$file" ] && cp "$file" $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/
+    [ -f "$file" ] && cp "$file" $RPM_BUILD_ROOT/opt/ukd/
 done
-[ -f VERSION ] && cp VERSION $RPM_BUILD_ROOT/opt/ultimate-kea-dashboard/
+[ -f VERSION ] && cp VERSION $RPM_BUILD_ROOT/opt/ukd/
 
 # Copy configuration
 cp -r etc/* $RPM_BUILD_ROOT/etc/ultimate-kea-dashboard/
@@ -67,31 +67,31 @@ cp etc/ultimate-kea-dashboard.service $RPM_BUILD_ROOT/usr/lib/systemd/system/
 %pre
 # Create user if doesn't exist
 if ! id ultimate-kea-dashboard >/dev/null 2>&1; then
-    useradd --system --home-dir /opt/ultimate-kea-dashboard --no-create-home \
+    useradd --system --home-dir /opt/ukd --no-create-home \
             --shell /sbin/nologin ultimate-kea-dashboard
 fi
 
 %post
 # Create directories if they don't exist
-mkdir -p /opt/ultimate-kea-dashboard || true
-mkdir -p /opt/ultimate-kea-dashboard/data || true
+mkdir -p /opt/ukd || true
+mkdir -p /opt/ukd/data || true
 mkdir -p /etc/ultimate-kea-dashboard || true
 mkdir -p /var/log/ultimate-kea-dashboard || true
 
 # Set permissions only if directories exist
-[ -d /opt/ultimate-kea-dashboard ] && chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /opt/ultimate-kea-dashboard || true
+[ -d /opt/ukd ] && chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /opt/ukd || true
 [ -d /etc/ultimate-kea-dashboard ] && chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /etc/ultimate-kea-dashboard || true
 [ -d /var/log/ultimate-kea-dashboard ] && chown -R ultimate-kea-dashboard:ultimate-kea-dashboard /var/log/ultimate-kea-dashboard || true
 
 # Install Python dependencies
-if [ -f /opt/ultimate-kea-dashboard/requirements.txt ]; then
-    cd /opt/ultimate-kea-dashboard
+if [ -f /opt/ukd/requirements.txt ]; then
+    cd /opt/ukd
     pip3 install -r requirements.txt >/dev/null 2>&1 || true
 fi
 
 # Download OUI database if not present
-if [ -d /opt/ultimate-kea-dashboard/data ] && [ ! -f /opt/ultimate-kea-dashboard/data/oui.txt ]; then
-    curl -s -o /opt/ultimate-kea-dashboard/data/oui.txt \
+if [ -d /opt/ukd/data ] && [ ! -f /opt/ukd/data/oui.txt ]; then
+    curl -s -o /opt/ukd/data/oui.txt \
          http://standards-oui.ieee.org/oui/oui.txt || true
 fi
 
@@ -133,14 +133,14 @@ fi
 
 %files
 %defattr(-,root,root,-)
-%attr(0755,ultimate-kea-dashboard,ultimate-kea-dashboard) /opt/ultimate-kea-dashboard
-/opt/ultimate-kea-dashboard/bin
-/opt/ultimate-kea-dashboard/lib
-/opt/ultimate-kea-dashboard/static
-/opt/ultimate-kea-dashboard/data
-%attr(0755,root,root) /opt/ultimate-kea-dashboard/start.sh
-/opt/ultimate-kea-dashboard/requirements.txt
-/opt/ultimate-kea-dashboard/VERSION
+%attr(0755,ultimate-kea-dashboard,ultimate-kea-dashboard) /opt/ukd
+/opt/ukd/bin
+/opt/ukd/lib
+/opt/ukd/static
+/opt/ukd/data
+%attr(0755,root,root) /opt/ukd/start.sh
+/opt/ukd/requirements.txt
+/opt/ukd/VERSION
 %config(noreplace) /etc/ultimate-kea-dashboard
 /usr/lib/systemd/system/ultimate-kea-dashboard.service
 %dir %attr(0755,ultimate-kea-dashboard,ultimate-kea-dashboard) /var/log/ultimate-kea-dashboard

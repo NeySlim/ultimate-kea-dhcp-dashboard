@@ -2,7 +2,15 @@
 import urllib.request
 import json
 import subprocess
+import time
 from pathlib import Path
+
+# Cache for GitHub API responses (to avoid rate limiting)
+_VERSION_CACHE = {
+    'latest_version': None,
+    'timestamp': 0,
+    'cache_duration': 3600  # 1 hour cache
+}
 
 def get_current_version():
     """Get current installed version"""
@@ -12,7 +20,15 @@ def get_current_version():
     return "unknown"
 
 def get_latest_version():
-    """Get latest version from GitHub releases"""
+    """Get latest version from GitHub releases (with 1-hour cache)"""
+    global _VERSION_CACHE
+    
+    # Check cache first
+    current_time = time.time()
+    if (_VERSION_CACHE['latest_version'] is not None and 
+        current_time - _VERSION_CACHE['timestamp'] < _VERSION_CACHE['cache_duration']):
+        return _VERSION_CACHE['latest_version']
+    
     try:
         url = "https://api.github.com/repos/NeySlim/ultimate-kea-dhcp-dashboard/releases/latest"
         req = urllib.request.Request(url)
@@ -20,10 +36,17 @@ def get_latest_version():
         
         with urllib.request.urlopen(req, timeout=5) as response:
             data = json.loads(response.read().decode())
-            return data.get('tag_name', '').lstrip('v')
+            version = data.get('tag_name', '').lstrip('v')
+            
+            # Update cache
+            _VERSION_CACHE['latest_version'] = version
+            _VERSION_CACHE['timestamp'] = current_time
+            
+            return version
     except Exception as e:
         print(f"[ERROR] Failed to check for updates: {e}")
-        return None
+        # Return cached version if available, even if expired
+        return _VERSION_CACHE.get('latest_version')
 
 def compare_versions(current, latest):
     """Compare version strings"""

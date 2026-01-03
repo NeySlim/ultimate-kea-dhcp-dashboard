@@ -5,19 +5,19 @@
 
 override_dh_auto_install:
 	# Create installation directories
-	mkdir -p debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard
+	mkdir -p debian/ultimate-kea-dashboard/opt/ukd
 	mkdir -p debian/ultimate-kea-dashboard/etc/ultimate-kea-dashboard
 	mkdir -p debian/ultimate-kea-dashboard/etc/systemd/system
 	mkdir -p debian/ultimate-kea-dashboard/var/log/ultimate-kea-dashboard
 	
 	# Copy application files
-	cp -r bin lib static debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/
+	cp -r bin lib static debian/ultimate-kea-dashboard/opt/ukd/
 	
 	# Copy data directory with translations
-	mkdir -p debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/data
-	cp data/translations.json debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/data/
+	mkdir -p debian/ultimate-kea-dashboard/opt/ukd/data
+	cp data/translations.json debian/ultimate-kea-dashboard/opt/ukd/data/
 	
-	cp start.sh requirements.txt VERSION debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/
+	cp start.sh requirements.txt VERSION debian/ultimate-kea-dashboard/opt/ukd/
 	
 	# Copy configuration
 	cp -r etc/* debian/ultimate-kea-dashboard/etc/ultimate-kea-dashboard/
@@ -33,5 +33,5 @@ override_dh_auto_test:
 
 override_dh_fixperms:
 	dh_fixperms
-	chmod +x debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/start.sh
-	chmod +x debian/ultimate-kea-dashboard/opt/ultimate-kea-dashboard/bin/ultimate-kea-dashboard
+	chmod +x debian/ultimate-kea-dashboard/opt/ukd/start.sh
+	chmod +x debian/ultimate-kea-dashboard/opt/ukd/bin/ultimate-kea-dashboard

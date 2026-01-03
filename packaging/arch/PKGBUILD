@@ -26,15 +26,15 @@ package() {
     cd "${srcdir}/${pkgname}-${pkgver}"
     
     # Create directories
-    install -dm755 "${pkgdir}/opt/ultimate-kea-dashboard"
+    install -dm755 "${pkgdir}/opt/ukd"
     install -dm755 "${pkgdir}/etc/ultimate-kea-dashboard"
     install -dm755 "${pkgdir}/var/log/ultimate-kea-dashboard"
     
     # Copy application files
-    cp -r bin lib static data "${pkgdir}/opt/ultimate-kea-dashboard/"
-    install -Dm755 start.sh "${pkgdir}/opt/ultimate-kea-dashboard/start.sh"
-    install -Dm644 requirements.txt "${pkgdir}/opt/ultimate-kea-dashboard/requirements.txt"
-    install -Dm644 VERSION "${pkgdir}/opt/ultimate-kea-dashboard/VERSION"
+    cp -r bin lib static data "${pkgdir}/opt/ukd/"
+    install -Dm755 start.sh "${pkgdir}/opt/ukd/start.sh"
+    install -Dm644 requirements.txt "${pkgdir}/opt/ukd/requirements.txt"
+    install -Dm644 VERSION "${pkgdir}/opt/ukd/VERSION"
     
     # Copy configuration
     cp -r etc/* "${pkgdir}/etc/ultimate-kea-dashboard/"
