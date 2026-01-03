@@ -2237,8 +2237,6 @@ def generate_html(info, lang="fr"):
                         <td><div class="skeleton skeleton-text"></div></td>
                         <td><div class="skeleton skeleton-text"></div></td>
                     </tr>
->
-                    <tr><td colspan="9"><em>{t.get('loading', 'Chargement...')}</em></td></tr>
                 </tbody>
             </table>
         </div>
