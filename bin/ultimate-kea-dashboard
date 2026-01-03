@@ -1874,21 +1874,17 @@ def generate_html(info, lang="fr"):
             }}
             .ukd-footer-content {{
                 display: flex;
-                align-items: flex-start;  /* Align top */
-                gap: 15px;
+                flex-direction: column;  /* Vertical stacking */
+                align-items: center;
+                gap: 10px;
                 justify-content: center;
-            }}
-            .ukd-brand {{
-                display: flex;
-                align-items: flex-start;  /* Align top */
-                gap: 15px;
             }}
             .ukd-logo-text {{
                 font-size: 1.5em;
                 font-weight: 800;
                 letter-spacing: 2px;
                 animation: glow 3s ease-in-out infinite;
-                line-height: 1.2;
+                line-height: 1;
             }}
             @keyframes glow {{
                 0%, 100% {{ opacity: 1; }}
@@ -1897,22 +1893,22 @@ def generate_html(info, lang="fr"):
             .ukd-author-link {{
                 display: inline-flex;
                 align-items: center;
-                gap: 7px;  /* Reduced from 8px */
+                gap: 6px;
                 text-decoration: none;
                 font-weight: 600;
-                padding: 7px 14px;  /* Reduced 10% */
-                border-radius: 7px;  /* Reduced 10% */
+                padding: 5px 10px;  /* Reduced more */
+                border-radius: 6px;
                 border: 1px solid;
                 transition: all 0.3s ease;
-                font-size: 0.9em;  /* Reduced 10% */
+                font-size: 0.75em;  /* Even smaller */
             }}
             .ukd-author-link:hover {{
                 transform: translateY(-2px);
                 box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             }}
             .ukd-github-icon {{
-                width: 18px;  /* Reduced from 20px */
-                height: 18px;  /* Reduced from 20px */
+                width: 14px;  /* Smaller icon */
+                height: 14px;
                 transition: transform 0.3s ease;
             }}
             .ukd-author-link:hover .ukd-github-icon {{
