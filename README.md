@@ -1,5 +1,8 @@
 # Ultimate Kea DHCP Dashboard
 
+> [!IMPORTANT]
+> This project is archived and no longer maintained. It is superseded by [Pelagos](https://github.com/NeySlim/pelagos), a self-hosted DDI for BIND 9 and ISC Kea (DNS, DHCP, DDNS) with a web UI.
+
 > **Languages / Langues:** [🇬🇧 English](README.md) | [🇫🇷 Français](README.fr.md)
 
 ---
